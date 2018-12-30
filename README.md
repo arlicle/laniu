@@ -1,2 +1,2 @@
 # laniu
-it’s django for clojure
+It’s django model for clojure
