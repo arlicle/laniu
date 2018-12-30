@@ -96,12 +96,18 @@
 ; get a user
 (def a-user (get user (where {:id 1})))
 
+; get field value
+(:first-name a-user)
+
+; get value by model func
+
+
 ; update a user
 (update user {:last-name "Arlicle"} (where {:id 1}))
 
 ; select users
 
-(filter user (where {:gender 1}))
+(select user (where {:gender 1}))
 
 ; select users with fields
-(filter user [:first-name :last-name :gender] (where {:gender 1}))
+(select user [:first-name :last-name :gender] (where {:gender 1}))
