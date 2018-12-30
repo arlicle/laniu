@@ -6,11 +6,13 @@ A Clojure library designed to ... well, that part is up to you.
 
 ## Usage
 
-**Define a model**
 
 ``` clojure
+
+;define a model
+
 (defmodel user
-          "define a model"
+          "model user document"
           {
            :id         (auto-field :verbose-name "pk" :primary_key true)
            :first-name (char-field :verbose-name "First name" :max-length 30)
