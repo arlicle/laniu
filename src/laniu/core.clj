@@ -24,6 +24,29 @@
   )
 
 
+(defn- integer-field
+  "
+  An integer. Values from -2147483648 to 2147483647 are safe in all databases.
+
+  "
+  [& opts]
+  (let [opts-map (apply hash-map opts)
+        max-value (if-let [max-value (:max-value opts-map)]
+                    #(<= (count %) max-value))
+        min-value (if-let [min-value (:min-value opts-map)]
+                    #(<= (count %) min-value))
+        choices-spec (if-let [choices (:choices opts-map)]
+                       (let [choices-map (into {} choices)]
+                         #(contains? choices-map %)))
+        validator-spec (if-let [validator (:validator opts-map)]
+                         validator)
+        ]
+
+    {
+     :valid-spec (filter identity [int? max-value min-value choices-spec validator-spec])
+     :options    opts-map
+     })
+  )
 
 
 (defmacro defmodel
