@@ -28,6 +28,80 @@
 
   "
 
-  [model-name fields & specs]
-
+  [model-name fields & body]
+  (defonce model-name)
   )
+
+
+
+(defmodel user
+          "define a model"
+          {
+           :id         (auto-field :verbose-name "pk" :primary_key true)
+           :first-name (char-field :verbose-name "First name" :max-length 30)
+           :last-name  (char-field :verbose-name "Last name" :max-length 30)
+           :gender     (small-integer-field :verbose-name "Gender" :choices '((0, "uninput"), (1, "male"), (5, "female")) :default 0)
+           :remarks    (text-field "Remarks" :default "")
+           :is-deleted (boolean-field :default false)
+           :created    (datetime-field :auto-now-add true)
+           }
+
+          (meta {
+                 :ordering [:sort-order]
+                 :db_table "db_user"
+                 })
+
+          (defn get-name
+            [self]
+            (str (:first-name self) " " (:last-name self))
+            ))
+
+
+(defn- make-query-then-exec [query-fn-var body & args]
+  `(let [query# (-> (~query-fn-var ~@args)
+                    ~@body)]
+     (exec query#)))
+
+
+(defn- confirm-model-data
+  "验证确认数据字段
+  验证插入的每个数据字段和defmodel中是否一致
+  如果字段没有，判断字段是否有默认值设置，如果有，自动填写默认值
+  "
+  [model data]
+  (println model)
+  )
+
+
+(defmacro insert
+  "insert data to table
+  model will valid data before insert
+  "
+  [model data & body]
+  (confirm-model-data model data))
+
+
+(insert user {:first-name "Edison" :last-name "Rao" :gender 1 :parent-id 0 :sort-order 1})
+
+(def a-user (get user (where {:id 1})))
+
+(update user {:last-name "Arlicle"} (where {:id 1}))
+
+
+;insert a data
+
+(insert user {:first-name "Edison" :last-name "Rao" :gender 1 :parent-id 0 :sort-order 1})
+;=> {:pk 1}
+
+; get a user
+(def a-user (get user (where {:id 1})))
+
+; update a user
+(update user {:last-name "Arlicle"} (where {:id 1}))
+
+; select users
+
+(filter user (where {:gender 1}))
+
+; select users with fields
+(filter user [:first-name :last-name :gender] (where {:gender 1}))
