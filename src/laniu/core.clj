@@ -227,9 +227,7 @@
   )
 
 
-(keyword 'user)
 
-(type (ns-name *ns*))
 
 (s/valid? ::user {:first-name "hahah" :last-name "lulu" :gender 3})
 (s/valid? ::user {:first-name "" :last-name ""})
@@ -237,40 +235,8 @@
 
 
 
-(s/valid? (keyword "laniu.user" "first-name") "hello")
 
 
-(do
-  (clojure.spec.alpha/def
-    :laniu.core/first-name
-    (clojure.spec.alpha/and
-      #function[clojure.core/string?--5395]
-      (fn* [p1__6050__6051__auto__] (clojure.core/<= (clojure.core/count p1__6050__6051__auto__) 30))))
-  (clojure.spec.alpha/def
-    :laniu.core/last-name
-    (clojure.spec.alpha/and
-      #function[clojure.core/string?--5395]
-      (fn* [p1__6050__6051__auto__] (clojure.core/<= (clojure.core/count p1__6050__6051__auto__) 30))))
-  (clojure.spec.alpha/def
-    :laniu.core/gender
-    (clojure.spec.alpha/and
-      #function[clojure.core/int?]
-      (fn* [p1__6085__6086__auto__] (clojure.core/contains? {1 "Male", 2 "Female"} p1__6085__6086__auto__))))
-  (clojure.spec.alpha/def :laniu.core/created (clojure.spec.alpha/and #function[clojure.core/int?]))
-  (clojure.spec.alpha/def
-    :laniu.core/user
-    (clojure.spec.alpha/keys
-      :req-un
-      [:laniu.core.user/first-name :laniu.core.user/last-name]
-      :opt-un
-      [:laniu.core.user/gender :laniu.core.user/created]))
-  (def
-    user
-    {:first-name {:type :char-field, :verbose-name "First name", :max-length 30},
-     :last-name {:type :char-field, :verbose-name "Last name", :max-length 30},
-     :gender {:type :tiny-int-field, :verbose-name "Gender", :choices [[1 "Male"] [2 "Female"]], :default 0},
-     :created {:type :int-field, :verbose-name "Created", :default (fn* [] (quot (System/currentTimeMillis) 1000))},
-     :---opt-fields [:gender :created],
-     :---sys-meta {:name "user", :ns-name "ns-name"},
-     :---meta {}}))
+
+
 
