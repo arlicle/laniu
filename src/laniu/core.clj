@@ -1,6 +1,10 @@
 (ns laniu.core
-  (:require [clojure.spec.alpha :as s])
-  )
+  (:require [clojure.spec.alpha :as s]
+            [clojure.java.jdbc :as jdbc]
+            ))
+
+
+
 
 
 (defn- char-field
@@ -105,10 +109,10 @@
                   (if (or (= :auto-field (:type v)) (:default v))
                     (-> r
                         (update-in [:opt] conj (keyword (str ns-name "." (name model-name)) (name k)))
-                        (update-in [:opt2] conj k))
+                        (update-in [:opt2] assoc k (:default v)))
                     (update-in r [:req] conj (keyword (str ns-name "." (name model-name)) (name k)))
                     )
-                  ) {:req [] :opt [] :opt2 []} fields-configs)
+                  ) {:req [] :opt [] :opt2 {}} fields-configs)
 
 
         models-fields (assoc fields-configs
@@ -152,34 +156,59 @@
   )
 
 
+(declare db-spec)
+
 (defn insert
   [model data]
   ; 验证数据
-  (if (s/valid? (keyword (str (ns-name *ns*)) (get-in model [:---sys-meta :name])) data)
-    (let [default-value-fields (:---opt-fields model)
+  (let [model-name (get-in model [:---sys-meta :name])]
+    (if (s/valid? (keyword (str (ns-name *ns*)) model-name) data)
+      (let [default-value-fields (:---opt-fields model)
 
-          ; 填充默认值
-          new-data
-          (if (seq default-value-fields)
-            (reduce (fn [s k]
-                      (let [v (get-in model [k :default])
-                            default-val (if (fn? v) (v) v)
-                            ]
-                        (if (nil? (k s))
-                          (assoc s k default-val)
-                          s
-                          ))
-                      ) data default-value-fields)
-            data
-            )
+            ; 填充默认值
+            new-data
+            (if (seq default-value-fields)
+              (reduce (fn [s k]
+                        (let [v (get-in model [k :default])
+                              default-val (if (fn? v) (v) v)
+                              ]
+                          (if (nil? (k s))
+                            (assoc s k default-val)
+                            s
+                            ))
+                        ) data default-value-fields)
+              data
+              )
+            ]
+        ; 把数据插入数据库
+
+        (jdbc/insert! db-spec (keyword model-name) data)
+
+        (println "insert data to db :" new-data)
+        )
+      (s/explain-data (keyword (str (ns-name *ns*)) model-name) data)
+      )))
+
+
+(defn insert-multi!
+  "一次插入多条数据"
+  ([model items] (insert-multi! model items true))
+  ([model items check&fill-default-data?]
+    (let [model-name (get-in model [:---sys-meta :name]) model-key (keyword (str (ns-name *ns*)) model-name)
+          data (if check&fill-default-data?
+                 (reduce (fn [item]
+                           (if)
+                           ) items)
+                 items
+                 )
           ]
-      ; 把数据插入数据库
-      (println "insert data to db :" new-data)
-      )
-    (s/explain-data (keyword (str (ns-name *ns*)) (get-in model [:---sys-meta :name])) data)
-    ))
+
+      (jdbc/insert-multi! db-spec (keyword model-name) data)
+      ))
+  )
 
 
+;(throw (Exception. "my exception message"))
 
 ; define a user spec
 ;(s/def :laniu.user/first-name (s/and string? #(<= (count %) 30)))
