@@ -115,7 +115,7 @@
   )
 
 
-(defn save
+(defn insert
   [model data]
   ; 验证数据
   (if (s/valid? ::user data)
@@ -167,4 +167,4 @@
   )
 
 
-(save user {:first-name "hello" :last-name "nihao" :gender 1})
+(insert user {:first-name "hello" :last-name "nihao" :gender 1})
