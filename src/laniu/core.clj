@@ -118,14 +118,14 @@
 (defn insert
   [model data]
   ; 验证数据
-  (if (s/valid? ::user data)
+  (if (s/valid? (keyword "laniu.learn" (get-in model [:---meta :name])) data)
     (let [default-value-fields (:---default-value-fields model)
 
           ; 填充默认值
           new-data
           (if (seq default-value-fields)
-            (reduce (fn [s [k v]]
-                      (let [;default (get-in model [k :options :default])
+            (reduce (fn [s k]
+                      (let [v (get-in model [k :default])
                             default-val (if (fn? v) (v) v)
                             ]
                         (if (nil? (k s))
@@ -163,6 +163,7 @@
    :last-name               {:type :char-field :verbose-name "Last name" :max-length 30}
    :created                 {:type :int-field :verbose-name "Created timestamp" :auto-now-add true :default #(quot (System/currentTimeMillis) 1000)}
    :---default-value-fields [:created]
+   :---meta                 {:name "user"}
    }
   )
 
