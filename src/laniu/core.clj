@@ -95,8 +95,9 @@
 
   (let [
         doc-string (if (string? first-arg) first-arg)
-        [fields-configs second-arg & rest-args] (if doc-string args (cons first-arg args))
-        [meta-configs rest-args] (if (and second-arg (= (first second-arg) 'meta)) [(apply hash-map (rest second-arg)) rest-args] [{} (cons second-arg rest-args)])
+        [fields-configs & rest-args] (if doc-string args (cons first-arg args))
+        rest-args (apply hash-map rest-args)
+        meta-configs (:meta rest-args {})
 
         ns-name (str (ns-name *ns*))
         {req-fields :req opt-fields :opt opt-fields2 :opt2}
@@ -105,7 +106,7 @@
                     (-> r
                         (update-in [:opt] conj (keyword (str ns-name "." (name model-name)) (name k)))
                         (update-in [:opt2] conj k))
-                    (update-in r [:req] conj (keyword (str ns-name  "." (name model-name)) (name k)))
+                    (update-in r [:req] conj (keyword (str ns-name "." (name model-name)) (name k)))
                     )
                   ) {:req [] :opt [] :opt2 []} fields-configs)
 
@@ -132,6 +133,8 @@
 
                     :tiny-int-field
                     (tiny-int-field field-opts)
+
+                    "other field"
                     )
                 )
               ))
@@ -205,25 +208,35 @@
 (insert user {:first-name "hello" :last-name "nihao" :gender 3})
 
 (defmodel user
-          "define a model"
-          {
+          "model user document"
+          {:id         {:type :auto-field :verbose-name "pk" :primary_key true}
            :first-name {:type :char-field :verbose-name "First name" :max-length 30}
            :last-name  {:type :char-field :verbose-name "Last name" :max-length 30}
-           :gender     {:type :tiny-int-field :verbose-name "Gender" :choices [[1 "Male"] [2 "Female"]] :default 0}
-           :created    {:type :int-field :verbose-name "Created" :default #(quot (System/currentTimeMillis) 1000)}
-           }
+           :gender     {:type :small-int-field :verbose-name "Gender" :choices [[0, "uninput"], [1, "male"], [5, "female"]] :default 0}
+           :remarks    {:type :text-field :default ""}
+           :is-deleted {:type :boolean-field :default false}
+           :created    {:type :datetime-field :auto-now-add true}}
+
+          :meta {:ordering [:sort-order]
+                 :db_table "db_user"}
+          :method {}
           )
 
 (macroexpand-1
   '(defmodel user
-            "define a model"
-            {
-             :first-name {:type :char-field :verbose-name "First name" :max-length 30}
-             :last-name  {:type :char-field :verbose-name "Last name" :max-length 30}
-             :gender     {:type :tiny-int-field :verbose-name "Gender" :choices [[1 "Male"] [2 "Female"]] :default 0}
-             :created    {:type :int-field :verbose-name "Created" :default #(quot (System/currentTimeMillis) 1000)}
-             }
-            )
+             "model user document"
+             {:id         {:type :auto-field :verbose-name "pk" :primary_key true}
+              :first-name {:type :char-field :verbose-name "First name" :max-length 30}
+              :last-name  {:type :char-field :verbose-name "Last name" :max-length 30}
+              :gender     {:type :small-int-field :verbose-name "Gender" :choices [[0, "uninput"], [1, "male"], [5, "female"]] :default 0}
+              :remarks    {:type :text-field :default ""}
+              :is-deleted {:type :boolean-field :default false}
+              :created    {:type :datetime-field :auto-now-add true}}
+
+             :meta {:ordering [:sort-order]
+                    :db_table "db_user"}
+             :method {}
+             )
   )
 
 

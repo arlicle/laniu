@@ -13,25 +13,18 @@ A Clojure library designed to normal human that don't like SQL, well, if you don
 
 (defmodel user
           "model user document"
-          {
-           :id         (auto-field :verbose-name "pk" :primary_key true)
-           :first-name (char-field :verbose-name "First name" :max-length 30)
-           :last-name  (char-field :verbose-name "Last name" :max-length 30)
-           :gender     (small-integer-field :verbose-name "Gender" :choices '((0, "uninput"), (1, "male"), (5, "female")) :default 0)
-           :remarks    (text-field "Remarks" :default "")
-           :is-deleted (boolean-field :default false)
-           :created    (datetime-field :auto-now-add true)
-           }
+          {:id         {:type :auto-field :verbose-name "pk" :primary_key true}
+           :first-name {:type :char-field :verbose-name "First name" :max-length 30}
+           :last-name  {:type :char-field :verbose-name "Last name" :max-length 30}
+           :gender     {:type :small-int-field :verbose-name "Gender" :choices [[0, "uninput"], [1, "male"], [5, "female"]] :default 0}
+           :remarks    {:type :text-field :default ""}
+           :is-deleted {:type :boolean-field :default false}
+           :created    {:type :datetime-field :auto-now-add true}}
 
-          (meta {
-                 :ordering [:sort-order]
-                 :db_table "db_user"
-                 })
-
-          (defn get-name
-            [self]
-            (str (:first-name self) " " (:last-name self))
-            ))
+          :meta {:ordering [:sort-order]
+                 :db_table "db_user"}
+          :method {}
+          )
 
 
 ;insert a data
