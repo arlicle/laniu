@@ -13,13 +13,13 @@ A Clojure library designed to normal human that don't like SQL, well, if you don
 
 (defmodel user
           "model user document"
-          {:id         {:type :auto-field :verbose-name "pk" :primary_key true}
-           :first-name {:type :char-field :verbose-name "First name" :max-length 30}
-           :last-name  {:type :char-field :verbose-name "Last name" :max-length 30}
-           :gender     {:type :small-int-field :verbose-name "Gender" :choices [[0, "uninput"], [1, "male"], [5, "female"]] :default 0}
-           :remarks    {:type :text-field :default ""}
-           :is-deleted {:type :boolean-field :default false}
-           :created    {:type :datetime-field :auto-now-add true}}
+          :fields {:id         {:type :auto-field :verbose-name "pk" :primary_key true}
+                   :first-name {:type :char-field :verbose-name "First name" :max-length 30}
+                   :last-name  {:type :char-field :verbose-name "Last name" :max-length 30}
+                   :gender     {:type :small-int-field :verbose-name "Gender" :choices [[0, "uninput"], [1, "male"], [5, "female"]] :default 0}
+                   :remarks    {:type :text-field :default ""}
+                   :is-deleted {:type :boolean-field :default false}
+                   :created    {:type :datetime-field :auto-now-add true}}
 
           :meta {:ordering [:sort-order]
                  :db_table "db_user"}

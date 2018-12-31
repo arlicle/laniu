@@ -94,9 +94,9 @@
   [model-name first-arg & args]
 
   (let [
-        doc-string (if (string? first-arg) first-arg)
-        [fields-configs & rest-args] (if doc-string args (cons first-arg args))
+        [doc-string rest-args] (if (string? first-arg) [first-arg args] [nil (cons first-arg args)])
         rest-args (apply hash-map rest-args)
+        fields-configs (:fields rest-args {})
         meta-configs (:meta rest-args {})
 
         ns-name (str (ns-name *ns*))
@@ -209,13 +209,13 @@
 
 (defmodel user
           "model user document"
-          {:id         {:type :auto-field :verbose-name "pk" :primary_key true}
-           :first-name {:type :char-field :verbose-name "First name" :max-length 30}
-           :last-name  {:type :char-field :verbose-name "Last name" :max-length 30}
-           :gender     {:type :small-int-field :verbose-name "Gender" :choices [[0, "uninput"], [1, "male"], [5, "female"]] :default 0}
-           :remarks    {:type :text-field :default ""}
-           :is-deleted {:type :boolean-field :default false}
-           :created    {:type :datetime-field :auto-now-add true}}
+          :fields {:id         {:type :auto-field :verbose-name "pk" :primary_key true}
+                   :first-name {:type :char-field :verbose-name "First name" :max-length 30}
+                   :last-name  {:type :char-field :verbose-name "Last name" :max-length 30}
+                   :gender     {:type :small-int-field :verbose-name "Gender" :choices [[0, "uninput"], [1, "male"], [5, "female"]] :default 0}
+                   :remarks    {:type :text-field :default ""}
+                   :is-deleted {:type :boolean-field :default false}
+                   :created    {:type :datetime-field :auto-now-add true}}
 
           :meta {:ordering [:sort-order]
                  :db_table "db_user"}
@@ -225,13 +225,13 @@
 (macroexpand-1
   '(defmodel user
              "model user document"
-             {:id         {:type :auto-field :verbose-name "pk" :primary_key true}
-              :first-name {:type :char-field :verbose-name "First name" :max-length 30}
-              :last-name  {:type :char-field :verbose-name "Last name" :max-length 30}
-              :gender     {:type :small-int-field :verbose-name "Gender" :choices [[0, "uninput"], [1, "male"], [5, "female"]] :default 0}
-              :remarks    {:type :text-field :default ""}
-              :is-deleted {:type :boolean-field :default false}
-              :created    {:type :datetime-field :auto-now-add true}}
+             :fields {:id         {:type :auto-field :verbose-name "pk" :primary_key true}
+                      :first-name {:type :char-field :verbose-name "First name" :max-length 30}
+                      :last-name  {:type :char-field :verbose-name "Last name" :max-length 30}
+                      :gender     {:type :small-int-field :verbose-name "Gender" :choices [[0, "uninput"], [1, "male"], [5, "female"]] :default 0}
+                      :remarks    {:type :text-field :default ""}
+                      :is-deleted {:type :boolean-field :default false}
+                      :created    {:type :datetime-field :auto-now-add true}}
 
              :meta {:ordering [:sort-order]
                     :db_table "db_user"}
