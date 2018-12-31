@@ -17,7 +17,7 @@
                          `#(contains? ~choices-map %)))
         ]
 
-    (filterv identity [string? max-length-spec choices-spec])
+    (filterv identity [`string? max-length-spec choices-spec])
     )
   )
 
@@ -44,7 +44,7 @@
                          `#(contains? ~choices-map %)))
         ]
 
-    (filterv identity [int? max-value-spec min-value-spec choices-spec])
+    (filterv identity [`int? max-value-spec min-value-spec choices-spec])
     )
   )
 
@@ -73,7 +73,7 @@
         ]
 
 
-    (filterv identity [int? max-value-spec min-value-spec choices-spec])
+    (filterv identity [`int? max-value-spec min-value-spec choices-spec])
     )
   )
 
@@ -91,26 +91,37 @@
 
   "
 
-  [model-name & args]
+  [model-name first-arg & args]
 
-  (let [first-arg (first args)
+  (let [
         doc-string (if (string? first-arg) first-arg)
-        fields-configs (eval (if (string? first-arg) (second args) first-arg))
-        fields-keys (keys fields-configs)
-        name-space "laniu."
-        {req-fields :req opt-fields :opt}
+        [fields-configs second-arg & rest-args] (if doc-string args (cons first-arg args))
+        [meta-configs rest-args] (if (and second-arg (= (first second-arg) 'meta)) [(apply hash-map (rest second-arg)) rest-args] [{} (cons second-arg rest-args)])
+
+        ns-name (str (ns-name *ns*))
+        {req-fields :req opt-fields :opt opt-fields2 :opt2}
         (reduce (fn [r [k v]]
                   (if (or (= :auto-field (:type v)) (:default v))
-                    (update-in r [:opt] conj k)
-                    (update-in r [:req] conj k)
+                    (-> r
+                        (update-in [:opt] conj (keyword (str ns-name "." (name model-name)) (name k)))
+                        (update-in [:opt2] conj k))
+                    (update-in r [:req] conj (keyword (str ns-name  "." (name model-name)) (name k)))
                     )
-                  ) {:req [] :opt []} fields-configs)
+                  ) {:req [] :opt [] :opt2 []} fields-configs)
+
+
+        models-fields (assoc fields-configs
+                        :---opt-fields opt-fields2
+                        :---sys-meta {:name (name model-name) :ns-name "ns-name"}
+                        :---meta meta-configs)
+
         ]
+
 
     `(do
        ~@(for [[k field-opts] fields-configs]
            `(s/def
-              ~(keyword (str name-space (name model-name)) (name k))
+              ~(keyword (str ns-name "." (name model-name)) (name k))
               (s/and
                 ~@(case (:type field-opts)
                     :char-field
@@ -125,10 +136,14 @@
                 )
               ))
 
-       (s/def ::user
+       (s/def ~(keyword ns-name (name model-name))
          (s/keys :req-un ~req-fields
                  :opt-un ~opt-fields
                  ))
+
+       (def ~(symbol model-name)
+         ~models-fields
+         )
        )
     )
   )
@@ -137,8 +152,8 @@
 (defn insert
   [model data]
   ; 验证数据
-  (if (s/valid? (keyword "laniu.learn" (get-in model [:---meta :name])) data)
-    (let [default-value-fields (:---default-value-fields model)
+  (if (s/valid? (keyword (str (ns-name *ns*)) (get-in model [:---sys-meta :name])) data)
+    (let [default-value-fields (:---opt-fields model)
 
           ; 填充默认值
           new-data
@@ -158,36 +173,36 @@
       ; 把数据插入数据库
       (println "insert data to db :" new-data)
       )
-    (s/explain-data ::user data)
+    (s/explain-data (keyword (str (ns-name *ns*)) (get-in model [:---sys-meta :name])) data)
     ))
 
 
 
 ; define a user spec
-(s/def :laniu.user/first-name (s/and string? #(<= (count %) 30)))
-(s/def :laniu.user/last-name (s/and string? #(<= (count %) 30)))
-(s/def :laniu.user/gender (s/and #(contains? {1 "男" 2 "女"} %)))
-(s/def :laniu.user/created (s/and int?))
-(s/def :laniu.user/id (s/and int?))
+;(s/def :laniu.user/first-name (s/and string? #(<= (count %) 30)))
+;(s/def :laniu.user/last-name (s/and string? #(<= (count %) 30)))
+;(s/def :laniu.user/gender (s/and #(contains? {1 "男" 2 "女"} %)))
+;(s/def :laniu.user/created (s/and int?))
+;(s/def :laniu.user/id (s/and int?))
+;
+;(s/def ::user
+;  (s/keys :req-un [:laniu.user/first-name :laniu.user/last-name :laniu.user/gender]
+;          :opt-un [:laniu.user/id :laniu.user/created]
+;          ))
+;
+;(def user
+;  {
+;   :id                      {:type :auto-field :primary_key true}
+;   :first-name              {:type :char-field :verbose-name "First name" :max-length 30}
+;   :last-name               {:type :char-field :verbose-name "Last name" :max-length 30}
+;   :created                 {:type :int-field :verbose-name "Created timestamp" :auto-now-add true :default #(quot (System/currentTimeMillis) 1000)}
+;   :---default-value-fields [:created]
+;   :---meta                 {:name "user"}
+;   }
+;  )
 
-(s/def ::user
-  (s/keys :req-un [:laniu.user/first-name :laniu.user/last-name :laniu.user/gender]
-          :opt-un [:laniu.user/id :laniu.user/created]
-          ))
 
-(def user
-  {
-   :id                      {:type :auto-field :primary_key true}
-   :first-name              {:type :char-field :verbose-name "First name" :max-length 30}
-   :last-name               {:type :char-field :verbose-name "Last name" :max-length 30}
-   :created                 {:type :int-field :verbose-name "Created timestamp" :auto-now-add true :default #(quot (System/currentTimeMillis) 1000)}
-   :---default-value-fields [:created]
-   :---meta                 {:name "user"}
-   }
-  )
-
-
-(insert user {:first-name "hello" :last-name "nihao" :gender 1})
+(insert user {:first-name "hello" :last-name "nihao" :gender 3})
 
 (defmodel user
           "define a model"
@@ -199,4 +214,63 @@
            }
           )
 
+(macroexpand-1
+  '(defmodel user
+            "define a model"
+            {
+             :first-name {:type :char-field :verbose-name "First name" :max-length 30}
+             :last-name  {:type :char-field :verbose-name "Last name" :max-length 30}
+             :gender     {:type :tiny-int-field :verbose-name "Gender" :choices [[1 "Male"] [2 "Female"]] :default 0}
+             :created    {:type :int-field :verbose-name "Created" :default #(quot (System/currentTimeMillis) 1000)}
+             }
+            )
+  )
+
+
+(keyword 'user)
+
+(type (ns-name *ns*))
+
+(s/valid? ::user {:first-name "hahah" :last-name "lulu" :gender 3})
+(s/valid? ::user {:first-name "" :last-name ""})
+(s/explain-data ::user {:first-name "" :last-name "" :gender 2})
+
+
+
 (s/valid? (keyword "laniu.user" "first-name") "hello")
+
+
+(do
+  (clojure.spec.alpha/def
+    :laniu.core/first-name
+    (clojure.spec.alpha/and
+      #function[clojure.core/string?--5395]
+      (fn* [p1__6050__6051__auto__] (clojure.core/<= (clojure.core/count p1__6050__6051__auto__) 30))))
+  (clojure.spec.alpha/def
+    :laniu.core/last-name
+    (clojure.spec.alpha/and
+      #function[clojure.core/string?--5395]
+      (fn* [p1__6050__6051__auto__] (clojure.core/<= (clojure.core/count p1__6050__6051__auto__) 30))))
+  (clojure.spec.alpha/def
+    :laniu.core/gender
+    (clojure.spec.alpha/and
+      #function[clojure.core/int?]
+      (fn* [p1__6085__6086__auto__] (clojure.core/contains? {1 "Male", 2 "Female"} p1__6085__6086__auto__))))
+  (clojure.spec.alpha/def :laniu.core/created (clojure.spec.alpha/and #function[clojure.core/int?]))
+  (clojure.spec.alpha/def
+    :laniu.core/user
+    (clojure.spec.alpha/keys
+      :req-un
+      [:laniu.core.user/first-name :laniu.core.user/last-name]
+      :opt-un
+      [:laniu.core.user/gender :laniu.core.user/created]))
+  (def
+    user
+    {:first-name {:type :char-field, :verbose-name "First name", :max-length 30},
+     :last-name {:type :char-field, :verbose-name "Last name", :max-length 30},
+     :gender {:type :tiny-int-field, :verbose-name "Gender", :choices [[1 "Male"] [2 "Female"]], :default 0},
+     :created {:type :int-field, :verbose-name "Created", :default (fn* [] (quot (System/currentTimeMillis) 1000))},
+     :---opt-fields [:gender :created],
+     :---sys-meta {:name "user", :ns-name "ns-name"},
+     :---meta {}}))
+
