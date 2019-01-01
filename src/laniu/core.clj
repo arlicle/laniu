@@ -83,6 +83,8 @@
 
 
 
+
+
 (defmacro defmodel
   "A model is the single, definitive source of information about your data.
   It contains the essential fields and behaviors of the data you’re storing.
@@ -95,18 +97,13 @@
 
   "
 
-  [model-name first-arg & args]
+  [model-name & {fields-configs :fields meta-configs :meta methods-config :methods :or {meta-configs {} methods-config {}}}]
 
   (let [
-        [doc-string rest-args] (if (string? first-arg) [first-arg args] [nil (cons first-arg args)])
-        rest-args (apply hash-map rest-args)
-        fields-configs (:fields rest-args {})
-        meta-configs (:meta rest-args {})
-
         ns-name (str (ns-name *ns*))
         {req-fields :req opt-fields :opt opt-fields2 :opt2}
         (reduce (fn [r [k v]]
-                  (if (or (= :auto-field (:type v)) (:default v))
+                  (if (or (= :auto-field (:type v)) (contains? v :default))
                     (-> r
                         (update-in [:opt] conj (keyword (str ns-name "." (name model-name)) (name k)))
                         (update-in [:opt2] assoc k (:default v)))
@@ -116,7 +113,8 @@
 
 
         models-fields (assoc fields-configs
-                        :---opt-fields opt-fields2
+                        :---fields (vec (keys fields-configs))
+                        :---default-value-fields opt-fields2
                         :---sys-meta {:name (name model-name) :ns-name "ns-name"}
                         :---meta meta-configs)
 
@@ -138,7 +136,7 @@
                     :tiny-int-field
                     (tiny-int-field field-opts)
 
-                    "other field"
+                    ['string?]
                     )
                 )
               ))
@@ -156,57 +154,62 @@
   )
 
 
+(defn clean-model-data
+  [model data]
+  (select-keys (merge (:---default-value-fields model) data)
+               (:---fields model)
+               )
+  )
+
+
 (declare db-spec)
 
 (defn insert
-  [model data]
+
+  ([model data] (insert model data true))
   ; 验证数据
-  (let [model-name (get-in model [:---sys-meta :name])]
-    (if (s/valid? (keyword (str (ns-name *ns*)) model-name) data)
-      (let [default-value-fields (:---opt-fields model)
-
-            ; 填充默认值
-            new-data
-            (if (seq default-value-fields)
-              (reduce (fn [s k]
-                        (let [v (get-in model [k :default])
-                              default-val (if (fn? v) (v) v)
-                              ]
-                          (if (nil? (k s))
-                            (assoc s k default-val)
-                            s
-                            ))
-                        ) data default-value-fields)
-              data
-              )
-            ]
-        ; 把数据插入数据库
-
-        (jdbc/insert! db-spec (keyword model-name) data)
-
-        (println "insert data to db :" new-data)
-        )
-      (s/explain-data (keyword (str (ns-name *ns*)) model-name) data)
-      )))
+  ([model data check&fill-default-data?]
+   (let [model-name (get-in model [:---sys-meta :name])]
+     (if (s/valid? (keyword (str (ns-name *ns*)) model-name) data)
+       (let [new-data (clean-model-data model data)]
+         ; 把数据插入数据库
+         (println "insert data to db :" new-data)
+         ;(jdbc/insert! db-spec (keyword model-name) data)
+         )
+       (s/explain-data (keyword (str (ns-name *ns*)) model-name) data)
+       ))))
 
 
 (defn insert-multi!
   "一次插入多条数据"
   ([model items] (insert-multi! model items true))
   ([model items check&fill-default-data?]
-    (let [model-name (get-in model [:---sys-meta :name]) model-key (keyword (str (ns-name *ns*)) model-name)
-          data (if check&fill-default-data?
-                 (reduce (fn [item]
-                           (if)
-                           ) items)
-                 items
-                 )
-          ]
+   (let [model-name (get-in model [:---sys-meta :name]) model-key (keyword (str (ns-name *ns*)) model-name)
+         data (if check&fill-default-data?
+                (map-indexed (fn [idx item]
+                       (if (s/valid? model-key item)
+                         (clean-model-data model item)
+                         (throw (Exception. (str "error-data in row : " idx " , " item)))
+                         )
+                       ) items)
+                items
+                )
+         ]
 
-      (jdbc/insert-multi! db-spec (keyword model-name) data)
-      ))
+     (println "insert multi:")
+     (println data)
+     ;(jdbc/insert-multi! db-spec (keyword model-name) data)
+     ))
   )
 
+
+
+
+
+(defn insert-or-update!
+  "插入或者更新, 如果有就更新，如果没有就插入"
+  ()
+  )
 
 ;(throw (Exception. "my exception message"))
 
@@ -234,17 +237,16 @@
 ;  )
 
 
-(insert user {:first-name "hello" :last-name "nihao" :gender 3})
 
 (defmodel user
-          "model user document"
+          ;model user document
           :fields {:id         {:type :auto-field :verbose-name "pk" :primary_key true}
                    :first-name {:type :char-field :verbose-name "First name" :max-length 30}
                    :last-name  {:type :char-field :verbose-name "Last name" :max-length 30}
-                   :gender     {:type :small-int-field :verbose-name "Gender" :choices [[0, "uninput"], [1, "male"], [5, "female"]] :default 0}
+                   :gender     {:type :tiny-int-field :verbose-name "Gender" :choices [[0, "uninput"], [1, "male"], [5, "female"]] :default 0}
                    :remarks    {:type :text-field :default ""}
                    :is-deleted {:type :boolean-field :default false}
-                   :created    {:type :datetime-field :auto-now-add true}}
+                   :created    {:type :int-field :default #(quot (System/currentTimeMillis) 1000)}}
 
           :meta {:ordering [:sort-order]
                  :db_table "db_user"}
@@ -253,14 +255,14 @@
 
 (macroexpand-1
   '(defmodel user
-             "model user document"
+             ;model user document
              :fields {:id         {:type :auto-field :verbose-name "pk" :primary_key true}
                       :first-name {:type :char-field :verbose-name "First name" :max-length 30}
                       :last-name  {:type :char-field :verbose-name "Last name" :max-length 30}
-                      :gender     {:type :small-int-field :verbose-name "Gender" :choices [[0, "uninput"], [1, "male"], [5, "female"]] :default 0}
+                      :gender     {:type :tiny-int-field :verbose-name "Gender" :choices [[0, "uninput"], [1, "male"], [5, "female"]] :default 0}
                       :remarks    {:type :text-field :default ""}
                       :is-deleted {:type :boolean-field :default false}
-                      :created    {:type :datetime-field :auto-now-add true}}
+                      :created    {:type :int-field :default #(quot (System/currentTimeMillis) 1000)}}
 
              :meta {:ordering [:sort-order]
                     :db_table "db_user"}
@@ -271,10 +273,27 @@
 
 
 
+(insert user {:first-name "hello" :last-name "nihao" :gender 2})
+
+
+(insert-multi! user [{:first-name "hello" :last-name "nihao" :gender 1}
+                     {:first-name "hello" :last-name "nihao" :gender 1}
+                     {:first-name "hello" :last-name "nihao" :gender 1}])
+
+
+
+
+
 (s/valid? ::user {:first-name "hahah" :last-name "lulu" :gender 3})
 (s/valid? ::user {:first-name "" :last-name ""})
-(s/explain-data ::user {:first-name "" :last-name "" :gender 2})
+(def a (s/explain-data ::user {:first-name "" :last-name "" :gender 2}))
+(println a)
+(:problems a)
 
+(throw (Exception. (str "error-data in row : " idx " , " item)))
+(throw
+  (Exception.
+   (ex-info (str "error-data in row : " idx " , " item) a)))
 
 
 

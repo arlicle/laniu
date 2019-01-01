@@ -12,7 +12,7 @@ A Clojure library designed to normal human that don't like SQL, well, if you don
 ;define a model
 
 (defmodel user
-          "model user document"
+          ;model user document
           :fields {:id         {:type :auto-field :verbose-name "pk" :primary_key true}
                    :first-name {:type :char-field :verbose-name "First name" :max-length 30}
                    :last-name  {:type :char-field :verbose-name "Last name" :max-length 30}
