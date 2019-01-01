@@ -168,10 +168,14 @@
 
   ([model data] (insert model data true))
   ; 验证数据
-  ([model data check&fill-default-data?]
+  ([model data clean-data?]
    (let [model-name (get-in model [:---sys-meta :name])]
      (if (s/valid? (keyword (str (ns-name *ns*)) model-name) data)
-       (let [new-data (clean-model-data model data)]
+       (let [new-data
+             (if clean-data?
+               (clean-model-data model data))
+             data
+             ]
          ; 把数据插入数据库
          (println "insert data to db :" new-data)
          ;(jdbc/insert! db-spec (keyword model-name) data)
@@ -183,9 +187,9 @@
 (defn insert-multi!
   "一次插入多条数据"
   ([model items] (insert-multi! model items true))
-  ([model items check&fill-default-data?]
+  ([model items clean-data?]
    (let [model-name (get-in model [:---sys-meta :name]) model-key (keyword (str (ns-name *ns*)) model-name)
-         data (if check&fill-default-data?
+         data (if clean-data?
                 (map-indexed (fn [idx item]
                        (if (s/valid? model-key item)
                          (clean-model-data model item)
@@ -198,12 +202,36 @@
 
      (println "insert multi:")
      (println data)
-     ;(jdbc/insert-multi! db-spec (keyword model-name) data)
+     (comment
+       (jdbc/insert-multi! db-spec (keyword model-name) data))
      ))
   )
 
 
+(update! user {:last-name "Arlicle"} {:where {:id 1}})
 
+(defn update!
+  "更新数据
+  (update! user {:last-name \"Arlicle\"} {:where {:id 1}})
+  "
+  ([model data where-condition] (update! model data where-condition true))
+  ([model data where-condition clean-data?]
+    (let [[new-data new-where-condition]
+          (if clean-data?
+            [(select-keys data (:---fields model))
+             (select-keys {:where where-condition} (:---fields model))
+             ]
+            [data {:where where-condition}]
+            )
+          ]
+      ; 更新数据
+      (println new-data)
+      (println where-condition)
+      (comment
+        (jdbc/update! db-spec (keyword model-name)
+                      new-data
+                      new-where-condition))
+      )))
 
 
 (defn insert-or-update!
@@ -287,15 +315,6 @@
 (s/valid? ::user {:first-name "hahah" :last-name "lulu" :gender 3})
 (s/valid? ::user {:first-name "" :last-name ""})
 (def a (s/explain-data ::user {:first-name "" :last-name "" :gender 2}))
-(println a)
-(:problems a)
-
-(throw (Exception. (str "error-data in row : " idx " , " item)))
-(throw
-  (Exception.
-   (ex-info (str "error-data in row : " idx " , " item) a)))
-
-
 
 
 
