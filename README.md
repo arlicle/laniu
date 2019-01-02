@@ -103,6 +103,10 @@ A Clojure library designed to normal human that don't like SQL, well, if you don
         :where [:user.username [startwith "a"]])
 
 
+; aggregates
+
+; count
+
 ```
 
 
