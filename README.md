@@ -93,6 +93,14 @@ A Clojure library designed to normal human that don't like SQL, well, if you don
         )
 ;=> ["select * from user where id != ?" 1]
 
+; User.objects.filter(id__gte=1, created__year__gt=2015)
+(filter user
+        :where [:id [>= 1] :created.year [> 2015]])
+
+; Post.objects.filter(user__username__startwith="a")
+(filter post
+        :where [:user.username [startwith "a"]])
+
 ```
 
 
