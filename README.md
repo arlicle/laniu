@@ -29,23 +29,27 @@ A Clojure library designed to normal human that don't like SQL, well, if you don
 
 ;insert a data
 
-(insert user {:first-name "Edison" :last-name "Rao" :gender 1 :parent-id 0 :sort-order 1})
+(insert user :values {:first-name "Edison" :last-name "Rao" :gender 1 :parent-id 0 :sort-order 1})
 ;=> {:pk 1}
 
 ; get a user
-(def a-user (get user (where {:id 1})))
+(def a-user (get user (where [:id 1])))
 
 ; get field value
 (:first-name a-user)
 
 ; update a user
-(update user {:last-name "Arlicle"} (where {:id 1}))
+(update user
+        :values {:last-name "Arlicle"}
+        :where [:id 1])
 
 ; select users
-(select user (where {:gender 1}))
+(select user :where [:gender 1])
 
 ; select users with fields
-(select user [:first-name :last-name :gender] (where {:gender 1}))
+(select user [:first-name :last-name :gender] :where [:gender 1])
+
+
 ```
 
 
