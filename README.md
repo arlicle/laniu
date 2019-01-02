@@ -28,7 +28,6 @@ A Clojure library designed to normal human that don't like SQL, well, if you don
 
 
 ;insert a data
-
 (insert user :values {:first-name "Edison" :last-name "Rao" :gender 1 :parent-id 0 :sort-order 1})
 ;=> {:pk 1}
 
@@ -44,11 +43,55 @@ A Clojure library designed to normal human that don't like SQL, well, if you don
         :where [:id 1])
 
 ; select users
-(select user :where [:gender 1])
+(filter user 
+        :where [:gender 1])
 
 ; select users with fields
-(select user [:first-name :last-name :gender] :where [:gender 1])
+(filter user
+        :fields [:first-name :last-name :gender]
+        :where [:gender 1])
 
+;; you can alias a field using a vector of [field alias]
+(filter user
+        :fields [[:first-name :first] [:last-name :last] :gender]
+        :where [:gender 1])
+
+; foreinkey field
+(filter user
+        :fields [:first-name :last-name :group.name [:group.sort-order :sort-order] :gender]
+        :where [:gender 1])
+
+; If you dont's spec the  fields , the default it select *
+
+
+; more where condition
+; 中括号中的多个元素，默认带了and关系
+(filter user 
+        :where [:id 1 :name "hello"])
+; It's equal to 
+(filter user
+        :where (and [:id 1 :name "hello"]))
+
+; or condition
+(filter user
+        :where (or :id 1 :name "hello"))
+;=> [" select * from user where id=? or name=?" 1 "hello"]
+
+; sql with and , or
+(filter user
+        :where [(or :id 1 :name "hello")
+                (or :id 3 :name "cool")
+                ])
+
+(filter user
+        :where [:id [> 1]]
+        )
+;=> ["select * from user where id > ?" 1]
+
+(filter user
+        :where [:id [not= 1]]
+        )
+;=> ["select * from user where id != ?" 1]
 
 ```
 
