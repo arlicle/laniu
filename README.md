@@ -82,6 +82,7 @@ A Clojure library designed to normal human that don't like SQL, well, if you don
         :where [(or :id 1 :name "hello")
                 (or :id 3 :name "cool")
                 ])
+; ["select * from user where (id=? or name=?) and (id=? or name=?)" 1 "hello" 3 "cool"]
 
 (filter user
         :where [:id [> 1]]
@@ -100,6 +101,7 @@ A Clojure library designed to normal human that don't like SQL, well, if you don
 ; Post.objects.filter(user__username__startwith="a")
 (filter post
         :where [:user.username [startwith "a"]])
+
 
 ```
 
