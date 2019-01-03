@@ -5,3 +5,8 @@
 (deftest a-test
   (testing "FIXME, I fail."
     (is (= 0 1))))
+
+(def a 1)
+(first (keys (ns-publics 'laniu.core-test)))
+
+
