@@ -45,13 +45,16 @@ A Clojure library designed to normal human that don't like SQL, well, if you don
 
 (insert! reporter :values {:full_name "edison"})
 ;=> ({:generated_key 45})
+
 (insert! reporter :values {:full_name "chris"})
 ;=> ({:generated_key 46})
 
 (insert! category :values {:name "IT" :sort_order 1})
 ;=> ({:generated_key 9})
+
 (insert! category :values {:name "Movie" :sort_order 2})
 ;=> ({:generated_key 10})
+
 (insert! category :values {:name "Fun" :sort_order 3})
 ;=> ({:generated_key 11})
 
@@ -84,6 +87,7 @@ A Clojure library designed to normal human that don't like SQL, well, if you don
          :values {:full_name "Edison Rao"}
          :where [:id 45])
 ; => (1)
+
 ; update with multi conditions
 (update! reporter
          :values {:full_name "Chris Zheng"}
@@ -95,6 +99,7 @@ A Clojure library designed to normal human that don't like SQL, well, if you don
          :values {:reporter 1}
          :where [:category.name "IT"])
 ; => (1)
+
 (update! article
          :values {:category 9 :reporter 45}
          :where [:id 7])
