@@ -44,6 +44,7 @@ A Clojure library designed to normal human that don't like SQL, well, if you don
 when you define a model , It's automatic create the data spec.
 
 ### insert data
+If the field has :default config, It will auto fill the default value to the field.
 
 ``` clojure
 (insert! reporter :values {:full_name "edison"})
@@ -60,7 +61,14 @@ when you define a model , It's automatic create the data spec.
 
 (insert! category :values {:name "Fun" :sort_order 3})
 ;=> ({:generated_key 11})
+```
 
+
+
+### insert with default value
+:created field and :view_count field will auto fill the default value
+
+``` clojure
 (insert! article
          :values {:headline "just a test"
                   :content  "hello world"
