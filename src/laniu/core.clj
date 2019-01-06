@@ -646,6 +646,22 @@
     `(jdbc/query db-spec ~query-vec)))
 
 
+
+(defmacro select2
+  [model & {fields-list :fields where-condition :where debug? :debug?}]
+  (println fields-list)
+  )
+
+(select category
+        ;:fields [count (*)]
+        :aggregate ["count(*)"]
+        :debug? true
+        )
+
+(jdbc/query db-spec ["select count(id) as count, max(id) as max, min(id) as min, sum(id) as sum from ceshi_article"])
+
+
+
 ;(select article
 ;        :fields [:id :headline :content :reporter.full_name :category.name]
 ;        :where [:reporter.full_name "aaa"]
@@ -797,6 +813,7 @@ user
 
 (select category)
 
+
 (select category
         :fields [:id [:name :category_name]]
         :where [:name "IT"]
@@ -859,3 +876,50 @@ user
                     :db_table "ceshi_article"
                     }
              ))
+
+(let [a 1]
+  (throw "dd")
+  (println "ahaha")
+  )
+
+
+(tr)
+(Exception. "aaa")
+(AssertionError. "Wrong input.")
+
+(defn pool
+  [spec]
+  (let [cpds (doto (ComboPooledDataSource.)
+               (.setDriverClass (:classname spec))
+               (.setJdbcUrl (str "jdbc:" (:subprotocol spec) ":" (:subname spec)))
+               (.setUser (:user spec))
+               (.setPassword (:password spec))
+               ;; expire excess connections after 30 minutes of inactivity:
+               (.setMaxIdleTimeExcessConnections (* 30 60))
+               ;; expire connections after 3 hours of inactivity:
+               (.setMaxIdleTime (* 3 60 60)))]
+    {:datasource cpds}))
+
+(def pooled-db (delay (pool db-spec)))
+
+(defn db-connection [] @pooled-db)
+
+(db-connection)
+
+(jdbc/query (db-connection) ["select * from ceshi_article INNER JOIN ceshi_category ON (ceshi_article.category_id = ceshi_category.id) where ceshi_category.name= ?" "IT"]
+            )
+
+
+(defn defdb
+  [db-settings]
+  (prn db-settings)
+  )
+
+(defdb
+  {:default {
+             :classname   "com.mysql.jdbc.Driver"
+             :subprotocol "mysql"
+             :subname     "//127.0.0.1:3306/projectx2"
+             :user        "root"
+             :password    "123"
+             :useSSL      false}})
