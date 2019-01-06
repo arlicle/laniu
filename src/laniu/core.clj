@@ -385,7 +385,7 @@
                          (list? x)
                          (infix model x *vals)
                          (keyword? x)
-                         (get-field-db-name model x (atom []) (atom []))
+                         (get-field-db-name model x nil)
                          (symbol? x)
                          (do
                            (swap! *vals conj x)
@@ -423,18 +423,17 @@
   "
   [model data]
   (let [new-data (clean-data model data)
-        *join-table (atom [])
         [r-fields r-vals]
         (reduce (fn [r [k v]]
                   (if (list? v)
                     (let [[k2 v2] (infix model v)]
                       (-> r
-                          (update-in [0] conj (str (get-field-db-name model k *join-table) "=" k2))
+                          (update-in [0] conj (str (get-field-db-name model k nil) "=" k2))
                           (update-in [1] into v2)
                           )
                       )
                     (-> r
-                        (update-in [0] conj (str (get-field-db-name model k *join-table) "=?"))
+                        (update-in [0] conj (str (get-field-db-name model k nil) "=?"))
                         (update-in [1] conj v)
                         )
                     )
@@ -804,11 +803,16 @@
         :where [:headline [startswith "a"]])
 
 
-(update! article
-         :values {:view_count (+ :view_count 10)})
 
 (update! article
-         :values {:reporter 1}
+         :values {:view_count (+ :view_count 10)}
+         :where [:id 7])
+
+(delete! article :where [:id 3])
+
+(def a 30)
+(update! article
+         :values {:view_count (* :view_count a)}
          :where [:id 7])
 
 

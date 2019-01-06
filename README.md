@@ -170,73 +170,18 @@ A Clojure library designed to normal human that don't like SQL, well, if you don
 (select article
         :where [:headline [startswith "a"]])
 
-; get field value
-(:first-name a-user)
 
-; update a user
-(update user
-        :values {:last-name "Arlicle"}
-        :where [:id 1])
+; update with function
+(update! article
+         :values {:view_count (+ :view_count 10)})
 
-; select users
-(filter user 
-        :where [:gender 1])
+(def a 30)
+(update! article
+         :values {:view_count (* :view_count a)}
+         :where [:id 7])
 
-; select users with fields
-(filter user
-        :fields [:first-name :last-name :gender]
-        :where [:gender 1])
-
-;; you can alias a field using a vector of [field alias]
-(filter user
-        :fields [[:first-name :first] [:last-name :last] :gender]
-        :where [:gender 1])
-
-; foreinkey field
-(filter user
-        :fields [:first-name :last-name :group.name [:group.sort-order :sort-order] :gender]
-        :where [:gender 1])
-
-; If you dont's spec the  fields , the default it select *
-
-
-; more where condition
-; 中括号中的多个元素，默认带了and关系
-(filter user 
-        :where [:id 1 :name "hello"])
-; It's equal to 
-(filter user
-        :where (and [:id 1 :name "hello"]))
-
-; or condition
-(filter user
-        :where (or :id 1 :name "hello"))
-;=> [" select * from user where id=? or name=?" 1 "hello"]
-
-; sql with and , or
-(filter user
-        :where [(or :id 1 :name "hello")
-                (or :id 3 :name "cool")
-                ])
-; ["select * from user where (id=? or name=?) and (id=? or name=?)" 1 "hello" 3 "cool"]
-
-(filter user
-        :where [:id [> 1]]
-        )
-;=> ["select * from user where id > ?" 1]
-
-(filter user
-        :where [:id [not= 1]]
-        )
-;=> ["select * from user where id != ?" 1]
-
-; User.objects.filter(id__gte=1, created__year__gt=2015)
-(filter user
-        :where [:id [>= 1] :created.year [> 2015]])
-
-; Post.objects.filter(user__username__startwith="a")
-(filter post
-        :where [:user.username [startwith "a"]])
+; delete a article
+(delete! article :where [:id 3])
 
 
 ; aggregates
@@ -245,7 +190,12 @@ A Clojure library designed to normal human that don't like SQL, well, if you don
 
 ```
 
-
+## To do list
+#### Document
+#### Create table
+#### Migration
+#### Insert or update
+#### Connection Pooling
 
 ## License
 
