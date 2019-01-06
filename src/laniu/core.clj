@@ -309,7 +309,7 @@
               )]
         (when debug?
           (prn "insert data to db " (keyword db-table-name) " : " new-data))
-        (jdbc/insert! db-spec (keyword db-table-name) new-data))
+        (jdbc/insert! (db-connection) (keyword db-table-name) new-data))
       (s/explain-data (keyword (str (ns-name *ns*)) model-name) values)
       )))
 
@@ -335,7 +335,7 @@
     (when debug?
       (prn "db:" (keyword db-table-name) " items:" new-items))
 
-    (jdbc/insert-multi! db-spec (keyword db-table-name) new-items)
+    (jdbc/insert-multi! (db-connection) (keyword db-table-name) new-items)
     )
   )
 
@@ -558,7 +558,7 @@
     (when debug?
       (prn query-vec))
 
-    `(jdbc/execute! db-spec ~query-vec)
+    `(jdbc/execute! (db-connection) ~query-vec)
     ))
 
 ;(update! article {:category 2} :where [:id 2] :debug? true)
@@ -643,7 +643,7 @@
         query-vec (into [sql] values)]
     (when debug?
       (prn query-vec))
-    `(jdbc/query db-spec ~query-vec)))
+    `(jdbc/query (db-connection) ~query-vec)))
 
 
 
@@ -658,7 +658,7 @@
         :debug? true
         )
 
-(jdbc/query db-spec ["select count(id) as count, max(id) as max, min(id) as min, sum(id) as sum from ceshi_article"])
+(jdbc/query (db-connection) ["select count(id) as count, max(id) as max, min(id) as min, sum(id) as sum from ceshi_article"])
 
 
 
@@ -688,7 +688,7 @@
         query-vec (into [sql] values)]
     (when debug?
       (prn query-vec))
-    `(jdbc/execute! db-spec ~query-vec)))
+    `(jdbc/execute! (db-connection) ~query-vec)))
 
 
 ;(delete! article :where [:id 1] :debug? true)
@@ -789,7 +789,7 @@ user
                          :category 11}
                         ])
 
-(jdbc/query db-spec ["select * from ceshi_article INNER JOIN ceshi_category ON (ceshi_article.category_id = ceshi_category.id) where ceshi_category.name= ?" "IT"]
+(jdbc/query (db-connection) ["select * from ceshi_article INNER JOIN ceshi_category ON (ceshi_article.category_id = ceshi_category.id) where ceshi_category.name= ?" "IT"]
             )
 
 (select article :where [:id 7])
@@ -887,7 +887,7 @@ user
 (Exception. "aaa")
 (AssertionError. "Wrong input.")
 
-(defn pool
+(defn connection-pool
   [spec]
   (let [cpds (doto (ComboPooledDataSource.)
                (.setDriverClass (:classname spec))
@@ -900,14 +900,28 @@ user
                (.setMaxIdleTime (* 3 60 60)))]
     {:datasource cpds}))
 
-(def pooled-db (delay (pool db-spec)))
 
-(defn db-connection [] @pooled-db)
+
+(defn delay-pool
+  "Return a delay for creating a connection pool for the given spec."
+  [spec]
+  (delay (connection-pool spec)))
+
+(def delay-pooled-db (delay (connection-pool db-spec)))
+
+
+(defn db-connection [] @delay-pooled-db)
+
+
+
 
 (db-connection)
 
 (jdbc/query (db-connection) ["select * from ceshi_article INNER JOIN ceshi_category ON (ceshi_article.category_id = ceshi_category.id) where ceshi_category.name= ?" "IT"]
             )
+
+
+
 
 
 (defn defdb
