@@ -513,9 +513,25 @@
 
 (defn update-or-insert!
   "to be continue"
-  [model data & {where-condition :where debug? :debug? clean-data? :clean-data? :or {clean-data? true}}]
+  [model & {values :values where-condition :where debug? :debug? clean-data? :clean-data? :or {debug? false clean-data? true}}]
+  (let [t-con (db-connection)
+        pk-key (get-in model [:---sys-meta :primary_key])
+        pk (pk-key values)
+        where-condition (if (empty? where-condition)
+                          (if (not pk)
+                            (throw (Exception. "values must have pk or where condition can't empty"))
+                            [pk-key pk])
+                          where-condition)]
 
+    (jdbc/with-db-transaction [t-con db-spec]
+                              (let [result (update! model :values values :where where-condition :debug? debug)]
+                                (if (zero? (first result))
+                                  (insert! model :values values :debug? debug)
+                                  result)))
+
+    )
   )
+
 
 
 (defn get-select-fields-query
