@@ -4,6 +4,8 @@ It’s django model for clojure
 
 A Clojure library designed to normal human that don't like SQL, well, if you don't like SQL , that part is up to you.
 
+PS. It's provide connection pooling by `c3p0` library
+
 ## Usage
 
 ### config the database connection
@@ -326,7 +328,6 @@ When you define a model, the defmodel will auto define a data spec, when you ins
 #### Create table
 #### Migration
 #### Insert or update
-#### Connection Pooling
 #### Interacting with multiple databases
 
 ## License
