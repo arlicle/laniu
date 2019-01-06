@@ -732,16 +732,16 @@
 (insert-multi! article
                :values [{:headline "Apple make a phone"
                          :content  "bala babla ...."
-                         :reporter 2
-                         :category 1}
+                         :reporter 46
+                         :category 9}
                         {:headline "A good movie recommend"
                          :content  "bala babla ...."
-                         :reporter 1
-                         :category 2}
+                         :reporter 45
+                         :category 10}
                         {:headline "A funny joke"
                          :content  "bala babla ...."
-                         :reporter 2
-                         :category 3}
+                         :reporter 46
+                         :category 11}
                         ])
 
 (jdbc/query db-spec ["select * from ceshi_article INNER JOIN ceshi_category ON (ceshi_article.category_id = ceshi_category.id) where ceshi_category.name= ?" "IT"]
@@ -756,14 +756,60 @@
          :values {:full_name "Chris Zheng"}
          :where [:id 46])
 
+(update! article
+        :values {:category 9}
+        :where [:id 7])
+
+(update! article
+         :values {:category 9 :reporter 45}
+         :where [:id 7])
+
+
+
 (select category)
+
+(select category
+        :fields [:id [:name :category_name]]
+        :where [:name "IT"]
+        )
+
+; select with foreinkey field
 (select article
-        :fields [:id :headline :category]
-        :where [:category.name "IT"] :debug? true)
+        :fields [:id :headline :category.name]
+        :where [:id 7])
+
+
+(select article
+        :fields [:id :headline :category.name [:reporter.full_name :reporter_full_name]]
+        :where [:id 7])
+
+
+; select with forienkey condition
+
+(select article
+        :fields [:id :headline :content :category.name [:reporter.full_name :reporter_full_name]]
+        :where [:category.name "IT"])
+
+
+(select article
+        :fields [:id :headline :content :category.name :reporter.full_name]
+        :where [:category.name "IT" :reporter.full_name "Edison Rao"])
+
+; select where with function
+
+(select article
+        :where [:id [> 7]])
+
+(select article
+        :where [:headline [startswith "a"]])
+
+
+(update! article
+         :values {:view_count (+ :view_count 10)})
 
 (update! article
          :values {:reporter 1}
-         :where [:category.name "IT"])
+         :where [:id 7])
 
 
 (macroexpand-1

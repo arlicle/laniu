@@ -58,24 +58,24 @@ A Clojure library designed to normal human that don't like SQL, well, if you don
 (insert! article
          :values {:headline "just a test"
                   :content  "hello world"
-                  :reporter 1
-                  :category 3})
+                  :reporter 45
+                  :category 11})
 ; => ({:generated_key 6})
 
 ; insert multi rows
 (insert-multi! article
                :values [{:headline "Apple make a phone"
                          :content  "bala babla ...."
-                         :reporter 2
-                         :category 1}
+                         :reporter 46
+                         :category 9}
                         {:headline "A good movie recommend"
                          :content  "bala babla ...."
-                         :reporter 1
-                         :category 2}
+                         :reporter 45
+                         :category 10}
                         {:headline "A funny joke"
                          :content  "bala babla ...."
-                         :reporter 2
-                         :category 3}
+                         :reporter 46
+                         :category 11}
                         ])
 ;=> ({:generated_key 7} {:generated_key 8} {:generated_key 9})
 
@@ -84,16 +84,91 @@ A Clojure library designed to normal human that don't like SQL, well, if you don
          :values {:full_name "Edison Rao"}
          :where [:id 45])
 ; => (1)
+; update with multi conditions
 (update! reporter
          :values {:full_name "Chris Zheng"}
-         :where [:id 46])
+         :where [:id 46 :full_name "chris"])
 ; => (1)
 
-; update by foreinkey
+; update value , search with foreinkey model
+(update! article
+         :values {:reporter 1}
+         :where [:category.name "IT"])
+; => (1)
+(update! article
+         :values {:category 9 :reporter 45}
+         :where [:id 7])
+; => (1)
+
+; select
+(select category)
+; =>
+({:id 1, :name "aaa", :sort_order 0}
+ {:id 2, :name "bbb", :sort_order 0}
+ {:id 3, :name "ccc", :sort_order 0}
+ {:id 4, :name "ccc", :sort_order 0}
+ {:id 5, :name "aaa", :sort_order 0}
+ {:id 6, :name "bbb", :sort_order 0}
+ {:id 7, :name "ccc", :sort_order 0}
+ {:id 8, :name "IT news", :sort_order 1}
+ {:id 9, :name "IT", :sort_order 1}
+ {:id 10, :name "Movie", :sort_order 2}
+ {:id 11, :name "Fun", :sort_order 3}
+ {:id 12, :name "IT", :sort_order 1}
+ {:id 13, :name "Fun", :sort_order 3})
+
+;select with condition
+(select category 
+        :fields [:id :name]
+        :where [:name "IT"]
+        )
+;=> 
+({:id 9, :name "IT"} {:id 12, :name "IT"})
+
+; select with field alias
+(select category
+        :fields [:id [:name :category_name]]
+        :where [:name "IT"]
+        )
+;=> 
+({:id 9, :category_name "IT"} {:id 12, :category_name "IT"})
+
+; select foreinkey field
+(select article
+        :fields [:id :headline :category.name]
+        :where [:id 7])
+; => 
+({:id 7, :headline "Apple make a phone", :name "IT"})
+
+; select with multi foeinkey field
+(select article
+        :fields [:id :headline :category.name [:reporter.full_name :reporter_full_name]]
+        :where [:id 7])
+;=> 
+({:id 7, :headline "Apple make a phone", :name "IT", :reporter_full_name "Edison Rao"})
+
+; select with forienkey condition
+(select article
+        :fields [:id :headline :content :category.name [:reporter.full_name :reporter_full_name]]
+        :where [:category.name "IT"])
+;=>
+({:id 7, :headline "Apple make a phone", :content "bala babla ....", :name "IT", :reporter_full_name "Edison Rao"}
+ {:id 14, :headline "Apple make a phone", :content "bala babla ....", :name "IT", :reporter_full_name "aaa"})
 
 
-; get a user
-(def a-user (get user (where [:id 1])))
+(select article
+        :fields [:id :headline :content :category.name :reporter.full_name]
+        :where [:category.name "IT" :reporter.full_name "Edison Rao"])
+; => 
+({:id 7, :headline "Apple make a phone", :content "bala babla ....", :name "IT", :full_name "Edison Rao"})
+
+; others
+; select where with function
+(select article
+        :where [:id [> 7]])
+
+(select article
+        :where [:headline [startswith "a"]])
 
 ; get field value
 (:first-name a-user)
