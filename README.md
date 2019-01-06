@@ -11,25 +11,73 @@ A Clojure library designed to normal human that don't like SQL, well, if you don
 
 ;define a model
 
-(defmodel user
-          ;model user document
-          :fields {:id         {:type :auto-field :verbose-name "pk" :primary_key true}
-                   :first-name {:type :char-field :verbose-name "First name" :max-length 30}
-                   :last-name  {:type :char-field :verbose-name "Last name" :max-length 30}
-                   :gender     {:type :small-int-field :verbose-name "Gender" :choices [[0, "uninput"], [1, "male"], [5, "female"]] :default 0}
-                   :remarks    {:type :text-field :default ""}
-                   :is-deleted {:type :boolean-field :default false}
-                   :created    {:type :datetime-field :auto-now-add true}}
+(defmodel reporter
+          :fields {:full_name {:type :char-field :max-length 70}}
+          :meta {
+                 :db_table "ceshi_reporter"
+                 }
+          )
 
-          :meta {:ordering [:sort-order]
-                 :db_table "db_user"}
-          :method {}
+(defmodel category
+          :fields {:name       {:type :char-field :max-length 30}
+                   :sort_order {:type :int-field :default 0}
+                   }
+          :meta {
+                 :db_table "ceshi_category"
+                 }
+          )
+
+(defmodel article
+          :fields {:headline   {:type :char-field :max-length 200}
+                   :content    {:type :text-field}
+                   :view_count {:type :int-field :default 0}
+                   :reporter   {:type :foreignkey :model reporter :on-delete :cascade}
+                   :category   {:type :foreignkey :model category :on-delete :set-null :blank true}
+                   :created    {:type :int-field :default #(quot (System/currentTimeMillis) 1000)}
+                   }
+          :meta {
+                 :db_table "ceshi_article"
+                 }
           )
 
 
 ;insert a data
-(insert user :values {:first-name "Edison" :last-name "Rao" :gender 1 :parent-id 0 :sort-order 1})
-;=> {:pk 1}
+
+(insert! reporter {:full_name "edison"})
+;=> ({:generated_key 45})
+(insert! reporter {:full_name "chris"})
+;=> ({:generated_key 46})
+
+(insert! category {:name "IT" :sort_order 1})
+;=> ({:generated_key 9})
+(insert! category {:name "Movie" :sort_order 2})
+;=> ({:generated_key 10})
+(insert! category {:name "Fun" :sort_order 3})
+;=> ({:generated_key 11})
+
+(insert! article {:headline "just a test"
+                  :content  "hello world"
+                  :reporter 1
+                  :category 3
+                  }
+         )
+; => ({:generated_key 6})
+
+(insert-multi! article
+               [{:headline "Apple make a phone"
+                 :content  "bala babla ...."
+                 :reporter 2
+                 :category 1}
+                {:headline "A good movie recommend"
+                 :content  "bala babla ...."
+                 :reporter 1
+                 :category 2}
+                {:headline "A funny joke"
+                 :content  "bala babla ...."
+                 :reporter 2
+                 :category 3}
+                ])
+;=> ({:generated_key 7} {:generated_key 8} {:generated_key 9})
 
 ; get a user
 (def a-user (get user (where [:id 1])))

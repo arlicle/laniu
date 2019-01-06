@@ -224,11 +224,39 @@
          ))))
 
 
+
+
+(defn get-field-db-name
+  [model k *join-table]
+  (let [k_name (name k) model-db-table (get-model-db-name model)]
+    (if-let [[_ foreingnkey-field-name link-table-field] (re-find #"(\w+)\.(\w+)" k_name)]
+      ; 获取其它表的表明，替换第一个部分
+      (let [foreignkey-field (keyword foreingnkey-field-name)
+            _ (check-model-field model foreignkey-field)
+            join-model-db-name (get-in model [foreignkey-field :model :---meta :db_table])]
+        (if *join-table
+          (swap! *join-table conj [join-model-db-name
+                                   (str model-db-table "."
+                                        (get-field-db-column model foreignkey-field)
+                                        " = " join-model-db-name "."
+                                        (get-foreignkey-to-field-db-column model foreignkey-field)
+                                        )]))
+        (str join-model-db-name "." link-table-field)
+        )
+      (do
+        (check-model-field model k)
+        (str model-db-table "." (get-field-db-column model k)))
+      )))
+
+
 (defn clean-insert-model-data
   [model data]
-  (select-keys (merge (:---default-value-fields model) data)
-               (:---fields model)
-               ))
+  (reduce (fn [r [k v]]
+            (assoc r (get-field-db-name model k nil)
+                     (if (fn? v) (v) v)))
+          {}
+          (select-keys (merge (:---default-value-fields model) data)
+                       (:---fields model))))
 
 
 (defn- get-model-db-name
@@ -280,7 +308,7 @@
               data
               )]
         (when debug?
-          (println "insert data to db :" (keyword db-table-name) " : " new-data))
+          (prn "insert data to db " (keyword db-table-name) " : " new-data))
         (jdbc/insert! db-spec (keyword db-table-name) new-data))
       (s/explain-data (keyword (str (ns-name *ns*)) model-name) data)
       )))
@@ -342,6 +370,11 @@
 
 
 
+
+
+
+
+
 (defn infix
   ([model form]
    (let [*vals (atom [])]
@@ -367,27 +400,7 @@
 
 
 
-(defn get-field-db-name
-  [model k *join-table]
-  (let [k_name (name k) model-db-table (get-model-db-name model)]
-    (if-let [[_ foreingnkey-field-name link-table-field] (re-find #"(\w+)\.(\w+)" k_name)]
-      ; 获取其它表的表明，替换第一个部分
-      (let [foreignkey-field (keyword foreingnkey-field-name)
-            _ (check-model-field model foreignkey-field)
-            join-model-db-name (get-in model [foreignkey-field :model :---meta :db_table])]
 
-        (swap! *join-table conj [join-model-db-name
-                                 (str model-db-table "."
-                                      (get-field-db-column model foreignkey-field)
-                                      " = " join-model-db-name "."
-                                      (get-foreignkey-to-field-db-column model foreignkey-field)
-                                      )])
-        (str join-model-db-name "." link-table-field)
-        )
-      (do
-        (check-model-field model k)
-        (str model-db-table "." (get-field-db-column model k)))
-      )))
 
 ;(let [*join-table (atom [["11" "22"]])]
 ;  (swap! *join-table conj ["aa" "bb"])
@@ -680,6 +693,9 @@
                  }
           )
 
+(insert! reporter {:full_name "edison"})
+(insert! reporter {:full_name "chris"})
+
 (defmodel category
           :fields {:name       {:type :char-field :max-length 30}
                    :sort_order {:type :int-field :default 0}
@@ -689,6 +705,10 @@
                  }
           )
 
+(insert! category {:name "IT" :sort_order 1})
+(insert! category {:name "Movie" :sort_order 2})
+(insert! category {:name "Fun" :sort_order 3})
+
 
 (defmodel article
           :fields {:headline   {:type :char-field :max-length 200}
@@ -696,12 +716,35 @@
                    :view_count {:type :int-field :default 0}
                    :reporter   {:type :foreignkey :model reporter :on-delete :cascade}
                    :category   {:type :foreignkey :model category :on-delete :set-null :blank true}
-
+                   :created    {:type :int-field :default #(quot (System/currentTimeMillis) 1000)}
                    }
           :meta {
                  :db_table "ceshi_article"
                  }
           )
+
+(insert! article {:headline "just a test"
+                  :content  "hello world"
+                  :reporter 1
+                  :category 3
+                  }
+         )
+
+(insert-multi! article
+               [{:headline "Apple make a phone"
+                 :content  "bala babla ...."
+                 :reporter 2
+                 :category 1}
+                {:headline "A good movie recommend"
+                 :content  "bala babla ...."
+                 :reporter 1
+                 :category 2}
+                {:headline "A funny joke"
+                 :content  "bala babla ...."
+                 :reporter 2
+                 :category 3}
+                ])
+
 
 
 (macroexpand-1
