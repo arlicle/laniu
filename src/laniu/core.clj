@@ -1,9 +1,8 @@
 (ns laniu.core
+  (:import (com.mchange.v2.c3p0 ComboPooledDataSource))
   (:require [clojure.spec.alpha :as s]
             [clojure.java.jdbc :as jdbc]
             ))
-
-
 
 
 
@@ -137,24 +136,20 @@
   a primary key field will automatically be added to model if you don’t specify otherwise.
   "
   [fields]
-  (let [*primary_key? (atom false)
+  (let [*primary_key (atom nil)
         new-fields (reduce (fn [r [k v]]
                              (if (:primary_key? v)
-                               (reset! *primary_key? true)
-                               )
+                               (reset! *primary_key k))
                              (assoc r k
                                       (case (:type v)
                                         :foreignkey
                                         (merge {:db_column (str (name k) "_id") :to_field :id} v)
                                         (merge {:db_column (name k)} v)
                                         ))
-                             ) {} fields)
-        ]
-    (if (not @*primary_key?)
-      (assoc new-fields :id {:type :auto-field :primary_key? true :db_column "id"})
-      new-fields
-      )
-    ))
+                             ) {} fields)]
+    (if (not @*primary_key)
+      [(assoc new-fields :id {:type :auto-field :primary_key? true :db_column "id"}) :id]
+      [new-fields @*primary_key])))
 
 
 
@@ -184,12 +179,11 @@
                     )
                   ) {:req [] :opt [] :opt2 {}} fields-configs)
 
-        fields-configs (optimi-model-fields fields-configs)
-        _ (println "fields-configs:" fields-configs)
+        [fields-configs pk] (optimi-model-fields fields-configs)
         models-fields (assoc fields-configs
                         :---fields (set (keys fields-configs))
                         :---default-value-fields opt-fields2
-                        :---sys-meta {:name (name model-name) :ns-name ns-name}
+                        :---sys-meta {:name (name model-name) :ns-name ns-name :primary_key pk}
                         :---meta meta-configs)]
 
     `(do
@@ -234,8 +228,7 @@
   [model data]
   (select-keys (merge (:---default-value-fields model) data)
                (:---fields model)
-               )
-  )
+               ))
 
 
 (defn- get-model-db-name
@@ -254,7 +247,6 @@
   [model foreignkey-field]
   (get-in model [foreignkey-field :type])
   (let [to-field (get-in model [foreignkey-field :to_field])]
-    (prn "to-field" to-field)
     (if (keyword? to-field)
       (get-in model [foreignkey-field :model to-field :db_column])
       to-field
@@ -269,14 +261,11 @@
   (get-in model [:---sys-meta :name])
   )
 
-(defn get-model-table-name
-  [model]
-  (get-in model [:---meta :db_table])
-  )
+
 
 (defn get-model&table-name
   [model]
-  [(get-model-name model) (get-model-table-name model)]
+  [(get-model-name model) (get-model-db-name model)]
   )
 
 
@@ -387,20 +376,24 @@
             _ (check-model-field model foreignkey-field)
             join-model-db-name (get-in model [foreignkey-field :model :---meta :db_table])]
 
-        (swap! *join-table update-in [0] conj join-model-db-name)
-        (swap! *join-table update-in [1] conj (str model-db-table "." (get-field-db-column model foreignkey-field)
-                                                   " = " join-model-db-name "." (get-foreignkey-to-field-db-column model foreignkey-field)
-                                                   ))
-
+        (swap! *join-table conj [join-model-db-name
+                                 (str model-db-table "."
+                                      (get-field-db-column model foreignkey-field)
+                                      " = " join-model-db-name "."
+                                      (get-foreignkey-to-field-db-column model foreignkey-field)
+                                      )])
         (str join-model-db-name "." link-table-field)
         )
       (do
         (check-model-field model k)
-        (str model-db-table "." k_name))
+        (str model-db-table "." (get-field-db-column model k)))
       )))
 
-
-
+;(let [*join-table (atom [["11" "22"]])]
+;  (swap! *join-table conj ["aa" "bb"])
+;  (get-field-db-name article :category.name *join-table)
+;  (println @*join-table)
+;  )
 
 (defn clean-data
   "return the valid field data"
@@ -417,7 +410,7 @@
   "
   [model data]
   (let [new-data (clean-data model data)
-        *join-table (atom [[] []])
+        *join-table (atom [])
         [r-fields r-vals]
         (reduce (fn [r [k v]]
                   (if (list? v)
@@ -440,6 +433,13 @@
     [(clojure.string/join "," r-fields) r-vals]
     ))
 
+
+;
+;(get-update!-fields-query article {:category "aa"})
+;(get-update!-fields-query article {:headline "aa"})
+;(get-update!-fields-query article {:ccc "aa"})
+
+
 ;(get-update!-fields-query article {:headline "aaa" :view_count 100 :bbb 10})
 
 
@@ -458,7 +458,21 @@
   )
 
 
-
+(defn parse-sql-func
+  [[func-name v]]
+  (case func-name
+    > [" > ?" v]
+    >= [" >= ?" v]
+    < [" < ?" v]
+    <= [" <= ?" v]
+    (startswith :startswith) [" like ?" (str v "%")]
+    nil? [(if v
+            " IS NULL "
+            " IS NOT NULL "
+            ) nil]
+    (in :in) [(str " in " "(" (clojure.string/join "," (repeat (count v) "?")) ")") v]
+    [" **** " " none "]
+    ))
 
 
 
@@ -469,7 +483,7 @@
                                [(first where-condition) (rest where-condition)]
                                ['and where-condition])
         _ (check-where-func op)
-        *join-table (atom [[] []])
+        *join-table (atom [])
         [fields vals]
         (if (keyword? (first where-condition))
           (reduce (fn [r [k v]]
@@ -492,8 +506,9 @@
                   )
           (reduce (fn [r where-condition2]
                     (let [[fields-str2 vals2 join-table] (where-parse model where-condition2)]
-                      (swap! *join-table update-in [0] into (get join-table 0))
-                      (swap! *join-table update-in [1] into (get join-table 1))
+                      (swap! *join-table into join-table)
+                      ;(swap! *join-table update-in [0] into (get join-table 0))
+                      ;(swap! *join-table update-in [1] into (get join-table 1))
                       (-> r
                           (update-in [0] conj (str "(" fields-str2 ")"))
                           (update-in [1] #(apply conj %1 %2) vals2))
@@ -505,54 +520,68 @@
       )))
 
 
-
+;(where-parse article '[:id 1 :category.name "jjj" :reporter.full_name "eee"])
+;(let [*join-table (atom [["11" "22"]])]
+;  (swap! *join-table into [["aa" "bb"]])
+;  (println @*join-table)
+;  )
 
 
 (defmacro update!
   [model data & {where-condition :where debug? :debug? clean-data? :clean-data? :or {debug? false clean-data? true}}]
   (let [model (get-model model)
         [fields-str fields-values] (get-update!-fields-query model data)
-        [where-str values [join-tables join-tables-str]] (where-parse model where-condition)
-        join-tables-str (if (seq join-tables-str)
-                          (clojure.string/join
-                            " and "
-                            (set join-tables-str)))
-        where-str (if where-str
-                    (str " where " (and join-tables-str (str join-tables-str " and "))
-                         where-str))
+        [where-query-str values where-join-table] (where-parse model where-condition)
+        where-query-str (if where-query-str (str "where " where-query-str))
+
+        where-join-query-str (clojure.string/join " " (get-join-table-query (set where-join-table) "INNER"))
+
         fields-str (if fields-str (str " set " fields-str))
-        sql (str "update "
-                 (clojure.string/join "," (cons (get-model-db-name model) join-tables))
-                 fields-str where-str)
+        sql (str "update " (get-model-db-name model) " "
+                 where-join-query-str " "
+                 fields-str " " where-query-str)
         query-vec (-> [sql]
                       (into fields-values)
-                      (into values))
-        ]
-
+                      (into values))]
     (when debug?
-      (prn query-vec)
-      )
+      (prn query-vec))
 
     `(jdbc/execute! db-spec ~query-vec)
     ))
 
+;(update! article {:category 2} :where [:id 2] :debug? true)
+;(update! article {:category 2 :headline "cc"} :where [:id 2 :category.name "aaa"] :debug? true)
 
 
 
 
-(defn insert-or-update!
-  "插入或者更新, 如果有就更新，如果没有就插入"
-  ()
+(defn update-or-insert!
+  "to be continue"
+  [model data & {where-condition :where debug? :debug? clean-data? :clean-data? :or {clean-data? true}}]
+
   )
+;(update-or-insert! article {:id 3 :headline "xxx" :cc "eeee"})
+
+;:---sys-meta {:name "article", :ns-name "laniu.core", :primary_key :id},
+;
+;
+;(defn update-or-insert!
+;  "Updates columns or inserts a new row in the specified table"
+;  [db table row where-clause]
+;  (jdbc/with-db-transaction [t-con db]
+;                            (let [result (jdbc/update! t-con table row where-clause)]
+;                              (if (zero? (first result))
+;                                (jdbc/insert! t-con table row)
+;                                result))))
 
 
 
-(defn fields-parse
+
+(defn get-select-fields-query
   [model fields]
   (if (seq fields)
-    (let [*join-table (atom [[] []])]
-      [
-       (clojure.string/join ", "
+    (let [*join-table (atom [])]
+      [(clojure.string/join ", "
                             (map (fn [k]
                                    (if (= (type k) clojure.lang.Keyword)
                                      ; 一种是字段直接就是关键字，表示字段名
@@ -562,99 +591,86 @@
                                        (str (get-field-db-name model k0 *join-table) " as " (name k1))
                                        )))
                                  fields))
-       (clojure.string/join " " (set (map (fn [t s] (str "INNER JOIN " t " ON (" s ") ")) (get @*join-table 0) (get @*join-table 1))))
-       ]
-      )
-    ["*" nil]
-    ))
+       @*join-table])
+    ["*" nil]))
 
-(fields-parse article '[:id :headline :content [:reporter.full_name :full_name]
-                        [:reporter.id :vid]
-                        ])
-
-
-
-
-(defn parse-sql-func
-  [[func-name v]]
-  (case func-name
-    > [" > ?" v]
-    >= [" >= ?" v]
-    < [" < ?" v]
-    <= [" <= ?" v]
-    (startswith :startswith) [" like ?" (str v "%")]
-    nil? [(if v
-            " IS NULL "
-            " IS NOT NULL "
-            ) nil]
-    (in :in) [(str " in " "(" (clojure.string/join "," (repeat (count v) "?")) ")") v]
-    [" **** " " none "]
-    ))
+;(get-select-fields-query article '[:id :headline :content [:reporter.full_name :full_name]
+;                                   [:reporter.id :vid]
+;                                   ])
+;
+;(get-select-fields-query article '[:id :headline :content :reporter.full_name
+;                                   [:reporter.id :vid]
+;                                   ])
 
 
 
+(defn get-join-table-query
+  [join-table join-type]
+  (map (fn [[t s]] (str join-type " JOIN " t " ON (" s ")"))
+       join-table))
 
-(defn and-parse
-  [model and-condition]
-  (let [c (count and-condition)]
-    (let [[fields vals] (reduce (fn [r [k v]]
-                                  (let [[s-type new-val]    ;查询类型
-                                        (if (= (type v) clojure.lang.PersistentVector)
-                                          ; 如果是vector进行单独的处理
-                                          (parse-sql-func v)
-
-                                          ; 否则就是普通的值, 直接等于即可
-                                          ["= ?" v]
-                                          )
-                                        conj-func (if (= (type new-val) clojure.lang.PersistentVector)
-                                                    #(apply conj %1 %2)
-                                                    conj
-                                                    )
-                                        *join-table (atom []) *join-table-str (atom [])
-                                        ]
-                                    (-> r
-                                        (update-in, [0] conj (str (get-field-db-name model k *join-table *join-table-str) s-type))
-                                        (update-in, [1] conj-func new-val))))
-                                [[] []]
-                                (partition 2 and-condition)
-                                )]
-      [(str "where " (clojure.string/join " and " fields)) vals]
-      )
-    )
-  )
-
-
-
-
-
-
+(get-join-table-query '[["ceshi_reporter" "ceshi_article.reporter_id = ceshi_reporter.id"]] "inner")
 
 
 
 (defmacro select
   [model & {fields-list :fields where-condition :where debug? :debug?}]
-  (let [model (var-get (resolve model))
-        [where-str values join-tables _] (where-parse model where-condition)
-        where-str (if where-str (str "where " where-str) "")
-        [fields-str join-str] (fields-parse model fields-list)
-        sql (str "select " fields-str " from " (get-in model [:---meta :db_table]) " " join-str " " where-str)
-        query-vec (into [sql] values)
-        ]
-    (println "join-str:" join-str)
-    (println "fields-str:" fields-str)
-    (when debug?
-      (prn query-vec)
-      )
-    `(jdbc/query db-spec ~query-vec)
-    ))
+  (let [model (get-model model)
+        [where-query-str values where-join-table] (where-parse model where-condition)
+        where-query-str (if where-query-str (str "where " where-query-str))
+        [fields-str field-join-table] (get-select-fields-query model fields-list)
 
+        set-where-join-table (set where-join-table)
+        diff-join-table (clojure.set/difference (set field-join-table) set-where-join-table)
+        fields-join-query-strs (get-join-table-query diff-join-table "LEFT")
+        where-join-query-strs (get-join-table-query set-where-join-table "INNER")
+        sql (str "select " fields-str " from " (get-model-db-name model) " "
+                 (clojure.string/join " " fields-join-query-strs) " "
+                 (clojure.string/join " " where-join-query-strs) " "
+                 where-query-str)
+        query-vec (into [sql] values)]
+    (when debug?
+      (prn query-vec))
+    `(jdbc/query db-spec ~query-vec)))
 
 
 ;(select article
-;        :fields [:id :headline :content [:reporter.full_name :full_name]]
-;        :where [:id [in [1 2 3]]]
-;        :debug true
+;        :fields [:id :headline :content :reporter.full_name :category.name]
+;        :where [:reporter.full_name "aaa"]
+;        :debug? true
 ;        )
+;
+;(select article
+;        :fields [:id :headline :content [:reporter.full_name :full_name] :category.name]
+;        :where [:id [in [1 2 3]]]
+;        :debug? true
+;        )
+
+
+
+(defmacro delete!
+  [model & {where-condition :where debug? :debug?}]
+  (let [model (get-model model)
+        [where-query-str values where-join-table] (where-parse model where-condition)
+        where-query-str (if where-query-str (str "WHERE " where-query-str))
+        where-join-query-strs (get-join-table-query (set where-join-table) "INNER")
+        sql (str "DELETE " (get-model-db-name model) " FROM " (get-model-db-name model) " "
+                 (clojure.string/join " " where-join-query-strs) " "
+                 where-query-str)
+        query-vec (into [sql] values)]
+    (when debug?
+      (prn query-vec))
+    `(jdbc/execute! db-spec ~query-vec)))
+
+
+;(delete! article :where [:id 1] :debug? true)
+;(delete! article
+;         :where [:category.name "bbb"]
+;         :debug? true
+;         )
+
+
+
 
 
 (defmodel reporter
@@ -664,14 +680,23 @@
                  }
           )
 
+(defmodel category
+          :fields {:name       {:type :char-field :max-length 30}
+                   :sort_order {:type :int-field :default 0}
+                   }
+          :meta {
+                 :db_table "ceshi_category"
+                 }
+          )
+
 
 (defmodel article
           :fields {:headline   {:type :char-field :max-length 200}
                    :content    {:type :text-field}
                    :view_count {:type :int-field :default 0}
-                   :reporter   {:type :foreignkey :model reporter :on-delete :CASCADE
-                                ;:to_field :pid
-                                }
+                   :reporter   {:type :foreignkey :model reporter :on-delete :cascade}
+                   :category   {:type :foreignkey :model category :on-delete :set-null :blank true}
+
                    }
           :meta {
                  :db_table "ceshi_article"
@@ -679,19 +704,16 @@
           )
 
 
+(macroexpand-1
+  '(defmodel article
+             :fields {:headline   {:type :char-field :max-length 200}
+                      :content    {:type :text-field}
+                      :view_count {:type :int-field :default 0}
+                      :reporter   {:type :foreignkey :model reporter :on-delete :cascade}
+                      :category   {:type :foreignkey :model category :on-delete :set-null :blank? true}
 
-
-;(select article
-;        :fields [:id :headline :content [:reporter.full_name :full_name]]
-;        :where [
-;                [:id [in [1 2 3]]
-;                 :headline [startswith "aaa"]
-;                 :reporter.full_name "edison"
-;                 ]
-;                (or
-;                  [:id 1 :headline "ddd"]
-;                  [:id 2 :headline "jjj"]
-;                  )
-;                ]
-;        :debug? true
-;        )
+                      }
+             :meta {
+                    :db_table "ceshi_article"
+                    }
+             ))
