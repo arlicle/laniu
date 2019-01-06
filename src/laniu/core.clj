@@ -299,18 +299,18 @@
 
 (defn insert!
   "insert the data into the database."
-  [model data & {:keys [debug? clean-data?] :or {debug? false clean-data? true}}]
+  [model & {:keys [values debug? clean-data?] :or {debug? false clean-data? true}}]
   (let [[model-name db-table-name] (get-model&table-name model)]
-    (if (s/valid? (keyword (str (ns-name *ns*)) model-name) data)
+    (if (s/valid? (keyword (str (ns-name *ns*)) model-name) values)
       (let [new-data
             (if clean-data?
-              (clean-insert-model-data model data)
-              data
+              (clean-insert-model-data model values)
+              values
               )]
         (when debug?
           (prn "insert data to db " (keyword db-table-name) " : " new-data))
         (jdbc/insert! db-spec (keyword db-table-name) new-data))
-      (s/explain-data (keyword (str (ns-name *ns*)) model-name) data)
+      (s/explain-data (keyword (str (ns-name *ns*)) model-name) values)
       )))
 
 ;(insert! reporter {:full_name "hello4" :name "jjjj"})
@@ -318,7 +318,7 @@
 
 (defn insert-multi!
   "一次插入多条数据"
-  [model items & {:keys [debug? clean-data?] :or {debug? false clean-data? true}}]
+  [model & {:keys [values debug? clean-data?] :or {debug? false clean-data? true}}]
   (let [[model-name db-table-name] (get-model&table-name model)
         model-key (keyword (str (ns-name *ns*)) model-name)
         new-items (if clean-data?
@@ -327,8 +327,8 @@
                                      (clean-insert-model-data model item)
                                      (throw (Exception. (str "error-data in row : " idx " , " item)))
                                      )
-                                   ) items)
-                    items
+                                   ) values)
+                    values
                     )
         ]
 
@@ -541,9 +541,9 @@
 
 
 (defmacro update!
-  [model data & {where-condition :where debug? :debug? clean-data? :clean-data? :or {debug? false clean-data? true}}]
+  [model & {values :values where-condition :where debug? :debug? clean-data? :clean-data? :or {debug? false clean-data? true}}]
   (let [model (get-model model)
-        [fields-str fields-values] (get-update!-fields-query model data)
+        [fields-str fields-values] (get-update!-fields-query model values)
         [where-query-str values where-join-table] (where-parse model where-condition)
         where-query-str (if where-query-str (str "where " where-query-str))
 
@@ -693,8 +693,8 @@
                  }
           )
 
-(insert! reporter {:full_name "edison"})
-(insert! reporter {:full_name "chris"})
+(insert! reporter :values {:full_name "edison"})
+(insert! reporter :values {:full_name "chris"})
 
 (defmodel category
           :fields {:name       {:type :char-field :max-length 30}
@@ -705,9 +705,9 @@
                  }
           )
 
-(insert! category {:name "IT" :sort_order 1})
-(insert! category {:name "Movie" :sort_order 2})
-(insert! category {:name "Fun" :sort_order 3})
+(insert! category :values {:name "IT" :sort_order 1})
+(insert! category :values {:name "Movie" :sort_order 2})
+(insert! category :values {:name "Fun" :sort_order 3})
 
 
 (defmodel article
@@ -723,28 +723,47 @@
                  }
           )
 
-(insert! article {:headline "just a test"
+(insert! article
+         :values {:headline "just a test"
                   :content  "hello world"
                   :reporter 1
-                  :category 3
-                  }
-         )
+                  :category 3})
 
 (insert-multi! article
-               [{:headline "Apple make a phone"
-                 :content  "bala babla ...."
-                 :reporter 2
-                 :category 1}
-                {:headline "A good movie recommend"
-                 :content  "bala babla ...."
-                 :reporter 1
-                 :category 2}
-                {:headline "A funny joke"
-                 :content  "bala babla ...."
-                 :reporter 2
-                 :category 3}
-                ])
+               :values [{:headline "Apple make a phone"
+                         :content  "bala babla ...."
+                         :reporter 2
+                         :category 1}
+                        {:headline "A good movie recommend"
+                         :content  "bala babla ...."
+                         :reporter 1
+                         :category 2}
+                        {:headline "A funny joke"
+                         :content  "bala babla ...."
+                         :reporter 2
+                         :category 3}
+                        ])
 
+(jdbc/query db-spec ["select * from ceshi_article INNER JOIN ceshi_category ON (ceshi_article.category_id = ceshi_category.id) where ceshi_category.name= ?" "IT"]
+            )
+
+(select article :where [:id 7])
+
+(update! reporter
+         :values {:full_name "Edison Rao"}
+         :where [:id 45])
+(update! reporter
+         :values {:full_name "Chris Zheng"}
+         :where [:id 46])
+
+(select category)
+(select article
+        :fields [:id :headline :category]
+        :where [:category.name "IT"] :debug? true)
+
+(update! article
+         :values {:reporter 1}
+         :where [:category.name "IT"])
 
 
 (macroexpand-1

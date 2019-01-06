@@ -43,41 +43,54 @@ A Clojure library designed to normal human that don't like SQL, well, if you don
 
 ;insert a data
 
-(insert! reporter {:full_name "edison"})
+(insert! reporter :values {:full_name "edison"})
 ;=> ({:generated_key 45})
-(insert! reporter {:full_name "chris"})
+(insert! reporter :values {:full_name "chris"})
 ;=> ({:generated_key 46})
 
-(insert! category {:name "IT" :sort_order 1})
+(insert! category :values {:name "IT" :sort_order 1})
 ;=> ({:generated_key 9})
-(insert! category {:name "Movie" :sort_order 2})
+(insert! category :values {:name "Movie" :sort_order 2})
 ;=> ({:generated_key 10})
-(insert! category {:name "Fun" :sort_order 3})
+(insert! category :values {:name "Fun" :sort_order 3})
 ;=> ({:generated_key 11})
 
-(insert! article {:headline "just a test"
+(insert! article
+         :values {:headline "just a test"
                   :content  "hello world"
                   :reporter 1
-                  :category 3
-                  }
-         )
+                  :category 3})
 ; => ({:generated_key 6})
 
+; insert multi rows
 (insert-multi! article
-               [{:headline "Apple make a phone"
-                 :content  "bala babla ...."
-                 :reporter 2
-                 :category 1}
-                {:headline "A good movie recommend"
-                 :content  "bala babla ...."
-                 :reporter 1
-                 :category 2}
-                {:headline "A funny joke"
-                 :content  "bala babla ...."
-                 :reporter 2
-                 :category 3}
-                ])
+               :values [{:headline "Apple make a phone"
+                         :content  "bala babla ...."
+                         :reporter 2
+                         :category 1}
+                        {:headline "A good movie recommend"
+                         :content  "bala babla ...."
+                         :reporter 1
+                         :category 2}
+                        {:headline "A funny joke"
+                         :content  "bala babla ...."
+                         :reporter 2
+                         :category 3}
+                        ])
 ;=> ({:generated_key 7} {:generated_key 8} {:generated_key 9})
+
+; update
+(update! reporter
+         :values {:full_name "Edison Rao"}
+         :where [:id 45])
+; => (1)
+(update! reporter
+         :values {:full_name "Chris Zheng"}
+         :where [:id 46])
+; => (1)
+
+; update by foreinkey
+
 
 ; get a user
 (def a-user (get user (where [:id 1])))
