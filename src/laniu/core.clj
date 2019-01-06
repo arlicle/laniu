@@ -916,10 +916,44 @@ user
   )
 
 (defdb
-  {:default {
-             :classname   "com.mysql.jdbc.Driver"
-             :subprotocol "mysql"
-             :subname     "//127.0.0.1:3306/projectx2"
-             :user        "root"
-             :password    "123"
-             :useSSL      false}})
+  {:default   {
+               :classname   "com.mysql.jdbc.Driver"
+               :subprotocol "mysql"
+               :subname     "//127.0.0.1:3306/projectx2"
+               :user        "root"
+               :password    "123"
+               :useSSL      false
+               :role        :read_and_write
+               }
+   :read-db1  {:classname   "com.mysql.jdbc.Driver"
+               :subprotocol "mysql"
+               :subname     "//127.0.0.1:3306/projectx3"
+               :user        "root"
+               :password    "123"
+               :useSSL      false
+               :role        :read
+               }
+   :read-db2  {:classname   "com.mysql.jdbc.Driver"
+               :subprotocol "mysql"
+               :subname     "//127.0.0.1:3306/projectx4"
+               :user        "root"
+               :password    "123"
+               :useSSL      false
+               :role        :read
+               }
+   :write-db1 {:classname   "com.mysql.jdbc.Driver"
+               :subprotocol "mysql"
+               :subname     "//127.0.0.1:3306/users"
+               :user        "root"
+               :password    "123"
+               :useSSL      false
+               :role        :write}
+   :write-db2 {:classname   "com.mysql.jdbc.Driver"
+               :subprotocol "mysql"
+               :subname     "//127.0.0.1:3306/customers"
+               :user        "root"
+               :password    "123"
+               :useSSL      false
+               :role        :write
+               }
+   })
