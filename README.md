@@ -12,18 +12,12 @@ A Clojure library designed to normal human that don't like SQL, well, if you don
 (defmodel reporter
           :fields {:full_name {:type :char-field :max-length 70}}
           :meta {
-                 :db_table "ceshi_reporter"
-                 }
-          )
+                 :db_table "ceshi_reporter"})
 
 (defmodel category
           :fields {:name       {:type :char-field :max-length 30}
-                   :sort_order {:type :int-field :default 0}
-                   }
-          :meta {
-                 :db_table "ceshi_category"
-                 }
-          )
+                   :sort_order {:type :int-field :default 0}}
+          :meta {:db_table "ceshi_category"})
 
 (defmodel article
           :fields {:headline   {:type :char-field :max-length 200}
@@ -39,6 +33,8 @@ A Clojure library designed to normal human that don't like SQL, well, if you don
           )
 
 ```
+
+when you define a model , It's automatic create the data spec.
 
 ### insert data
 
@@ -65,6 +61,9 @@ A Clojure library designed to normal human that don't like SQL, well, if you don
                   :category 11})
 ; => ({:generated_key 6})
 ```
+
+### insert wrong data with spec error
+
 
 ### insert multi rows
 
@@ -102,7 +101,7 @@ A Clojure library designed to normal human that don't like SQL, well, if you don
          :where [:id 46 :full_name "chris"])
 ; => (1)
 
-; update value , search with foreinkey model
+; update value , search with foreignkey model
 (update! article
          :values {:reporter 1}
          :where [:category.name "IT"])
@@ -155,7 +154,7 @@ A Clojure library designed to normal human that don't like SQL, well, if you don
 ({:id 9, :category_name "IT"} {:id 12, :category_name "IT"})
 ```
 
-### select foreinkey field
+### select foreignkey field
 
 ``` clojure
 (select article
@@ -172,10 +171,10 @@ A Clojure library designed to normal human that don't like SQL, well, if you don
 ({:id 7, :headline "Apple make a phone", :name "IT", :reporter_full_name "Edison Rao"})
 ```
 
-### select foreinkey condition
+### select foreignkey condition
 
 ``` clojure
-; select with forienkey condition
+; select with foreignkey condition
 (select article
         :fields [:id :headline :content :category.name [:reporter.full_name :reporter_full_name]]
         :where [:category.name "IT"])
