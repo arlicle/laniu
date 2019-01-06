@@ -695,6 +695,8 @@
 (insert! reporter :values {:full_name "edison"})
 (insert! reporter :values {:full_name "chris"})
 
+(insert! reporter :values {:full_name2 "chris"})
+
 (defmodel category
           :fields {:name       {:type :char-field :max-length 30}
                    :sort_order {:type :int-field :default 0}
@@ -707,6 +709,34 @@
 (insert! category :values {:name "IT" :sort_order 1})
 (insert! category :values {:name "Movie" :sort_order 2})
 (insert! category :values {:name "Fun" :sort_order 3})
+(insert! category :values {:name "Flower" :sort_order "a"})
+
+
+
+(defmodel user
+          :fields {
+                   :first-name {:type :char-field :verbose-name "First name" :max-length 30}
+                   :last-name  {:type :char-field :verbose-name "Last name" :max-length 30}
+                   :gender     {:type :tiny-int-field :verbose-name "Gender" :choices [[0, "uninput"], [1, "Male"], [2, "Female"]] :default 0}
+                   :created    {:type :int-field :verbose-name "Created" :default #(quot (System/currentTimeMillis) 1000)}
+                   })
+
+(macroexpand-1
+  '(defmodel user
+             "define a model"
+             :fields {
+                      :first-name {:type :char-field :verbose-name "First name" :max-length 30}
+                      :last-name  {:type :char-field :verbose-name "Last name" :max-length 30}
+                      :gender     {:type :tiny-int-field :verbose-name "Gender" :choices '((0, "uninput"), (1, "Male"), (2, "Female")) :default 0}
+                      :created    {:type :int-field :verbose-name "Created" :default #(quot (System/currentTimeMillis) 1000)}
+                      }))
+
+user
+(insert! user
+         :values {:first-name "Edison"
+                  :last-name  "Rao"
+                  :gender     4
+                  })
 
 
 (defmodel article
@@ -756,8 +786,8 @@
          :where [:id 46])
 
 (update! article
-        :values {:category 9}
-        :where [:id 7])
+         :values {:category 9}
+         :where [:id 7])
 
 (update! article
          :values {:category 9 :reporter 45}

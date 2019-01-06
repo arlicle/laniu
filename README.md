@@ -11,8 +11,7 @@ A Clojure library designed to normal human that don't like SQL, well, if you don
 
 (defmodel reporter
           :fields {:full_name {:type :char-field :max-length 70}}
-          :meta {
-                 :db_table "ceshi_reporter"})
+          :meta {:db_table "ceshi_reporter"})
 
 (defmodel category
           :fields {:name       {:type :char-field :max-length 30}
@@ -25,12 +24,8 @@ A Clojure library designed to normal human that don't like SQL, well, if you don
                    :view_count {:type :int-field :default 0}
                    :reporter   {:type :foreignkey :model reporter :on-delete :cascade}
                    :category   {:type :foreignkey :model category :on-delete :set-null :blank true}
-                   :created    {:type :int-field :default #(quot (System/currentTimeMillis) 1000)}
-                   }
-          :meta {
-                 :db_table "ceshi_article"
-                 }
-          )
+                   :created    {:type :int-field :default #(quot (System/currentTimeMillis) 1000)}}
+          :meta {:db_table "ceshi_article"})
 
 ```
 
@@ -63,8 +58,58 @@ when you define a model , It's automatic create the data spec.
 ```
 
 ### insert wrong data with spec error
+When you define a model, the defmodel will auto define a data spec, when you insert data or update data, the spec will valid the data.
+
+``` clojure
+(insert! reporter :values {:full_name2 "chris"})
+;=>
+#:clojure.spec.alpha{:problems ({:path [],
+                                 :pred (clojure.core/fn [%] (clojure.core/contains? % :full_name)),
+                                 :val {:full_name2 "chris"},
+                                 :via [:laniu.core/reporter],
+                                 :in []}),
+                     :spec :laniu.core/reporter,
+                     :value {:full_name2 "chris"}}
 
 
+(insert! category :values {:name "Flower" :sort_order "a"})
+=>
+#:clojure.spec.alpha{:problems ({:path [:sort_order],
+                                 :pred clojure.core/int?,
+                                 :val "a",
+                                 :via [:laniu.core/category :laniu.core.category/sort_order],
+                                 :in [:sort_order]}),
+                     :spec :laniu.core/category,
+                     :value {:name "Flower", :sort_order "a"}}
+```
+
+### field with choices valid
+
+``` clojure
+(defmodel user
+          :fields {
+                   :first-name {:type :char-field :verbose-name "First name" :max-length 30}
+                   :last-name  {:type :char-field :verbose-name "Last name" :max-length 30}
+                   :gender     {:type :tiny-int-field :verbose-name "Gender" :choices [[0, "uninput"], [1, "Male"], [2, "Female"]] :default 0}
+                   :created    {:type :int-field :verbose-name "Created" :default #(quot (System/currentTimeMillis) 1000)}
+                   })
+
+(insert! user
+         :values {:first-name "Edison"
+                  :last-name  "Rao"
+                  :gender     4})
+=>
+#:clojure.spec.alpha{:problems ({:path [:gender],
+                                 :pred (clojure.core/fn
+                                        [%]
+                                        (clojure.core/contains? {0 "uninput", 1 "Male", 2 "Female"} %)),
+                                 :val 4,
+                                 :via [:laniu.core/user :laniu.core.user/gender],
+                                 :in [:gender]}),
+                     :spec :laniu.core/user,
+                     :value {:first-name "Edison", :last-name "Rao", :gender 4}}
+
+```
 ### insert multi rows
 
 ``` clojure
