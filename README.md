@@ -9,13 +9,40 @@ A Clojure library designed to normal human that don't like SQL, well, if you don
 ### config the database connection
 
 ``` clojure
-(def db-spec {
-              :classname   "com.mysql.jdbc.Driver"
-              :subprotocol "mysql"
-              :subname     "//127.0.0.1:3306/projectx2"
-              :user        "root"
-              :password    "123"
-              :useSSL      false})
+(defdb
+  {:default {
+             :classname   "com.mysql.jdbc.Driver"
+             :subprotocol "mysql"
+             :subname     "//127.0.0.1:3306/projectx2"
+             :user        "root"
+             :password    "123"
+             :useSSL      false
+             }}
+  )
+```
+
+### Multiple databases
+This setting maps database aliases, which are a way to refer to a specific database throughout query, to a dictionary of settings for that specific connection. 
+``` clojure
+(defdb
+  {:default {
+             :classname   "com.mysql.jdbc.Driver"
+             :subprotocol "mysql"
+             :subname     "//127.0.0.1:3306/projectx2"
+             :user        "root"
+             :password    "123"
+             :useSSL      false
+             :permission  :write
+             }
+   :read-db {:classname   "com.mysql.jdbc.Driver"
+             :subprotocol "mysql"
+             :subname     "//127.0.0.1:3306/projectx3"
+             :user        "root"
+             :password    "123"
+             :useSSL      false
+             :permission  :read
+             }
+   })
 ```
 
 ### define a model

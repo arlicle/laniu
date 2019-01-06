@@ -22,8 +22,7 @@
   If Laniu sees you’ve explicitly set :primary_key? true, it won’t add the automatic id column.
   "
   [{field-type :type primary_key? :primary_key?}]
-  [`int?]
-  )
+  [`int?])
 
 (defn- foreignkey-spec
   "
@@ -33,8 +32,7 @@
   – use {:type \"foreinkey\" :model \"self\" :on-delete  :CASCADE}
   "
   [{field-type :type model :model on-delete :on-delete blank? :blank?}]
-  [`int?]
-  )
+  [`int?])
 
 (defn- char-field-spec
   "
@@ -51,8 +49,7 @@
         ]
 
     (filterv identity [`string? max-length-spec choices-spec])
-    )
-  )
+    ))
 
 (defn- text-field-spec
   "
@@ -69,8 +66,7 @@
         ]
 
     (filterv identity [`string? max-length-spec choices-spec])
-    )
-  )
+    ))
 
 
 (defn- int-field-spec
@@ -96,8 +92,7 @@
         ]
 
     (filterv identity [`int? max-value-spec min-value-spec choices-spec])
-    )
-  )
+    ))
 
 
 (defn- tiny-int-field-spec
@@ -125,8 +120,7 @@
 
 
     (filterv identity [`int? max-value-spec min-value-spec choices-spec])
-    )
-  )
+    ))
 
 
 
@@ -290,7 +284,6 @@
   )
 
 
-
 (defn get-model&table-name
   [model]
   [(get-model-name model) (get-model-db-name model)]
@@ -313,7 +306,6 @@
       (s/explain-data (keyword (str (ns-name *ns*)) model-name) values)
       )))
 
-;(insert! reporter {:full_name "hello4" :name "jjjj"})
 
 
 (defn insert-multi!
@@ -339,16 +331,6 @@
     )
   )
 
-;(insert-multi! reporter [
-;                         {:full_name "hello aaa" :name "aaaa"}
-;                         {:full_name "hello bbb" :name "bbbb"}
-;                         {:full_name "hello ccc" :name "cccc"}
-;                         {:full_name "hello ddd" :name "ddddd"}
-;                         ]
-;               :debug? true
-;               )
-
-
 
 
 (defn check-model-field
@@ -366,12 +348,6 @@
                              field "'s type is " (or (get-in model [field :type]) "nil")
                              ))))
    true))
-
-
-
-
-
-
 
 
 
@@ -396,17 +372,6 @@
      (format "(%s)" (clojure.string/join "" (interpose op elements))))))
 
 
-
-
-
-
-
-
-;(let [*join-table (atom [["11" "22"]])]
-;  (swap! *join-table conj ["aa" "bb"])
-;  (get-field-db-name article :category.name *join-table)
-;  (println @*join-table)
-;  )
 
 (defn clean-data
   "return the valid field data"
@@ -440,19 +405,9 @@
                   )
                 [[] []]
                 new-data
-                )
-        ]
-    [(clojure.string/join "," r-fields) r-vals]
-    ))
+                )]
+    [(clojure.string/join "," r-fields) r-vals]))
 
-
-;
-;(get-update!-fields-query article {:category "aa"})
-;(get-update!-fields-query article {:headline "aa"})
-;(get-update!-fields-query article {:ccc "aa"})
-
-
-;(get-update!-fields-query article {:headline "aaa" :view_count 100 :bbb 10})
 
 
 (defn get-model
@@ -466,8 +421,7 @@
   (if (not (contains? #{'or 'and} op))
     (throw (Exception. (str "() must first of function 'or' or 'and', " op " is not valid.")))
     )
-  true
-  )
+  true)
 
 
 (defn parse-sql-func
@@ -532,12 +486,6 @@
       )))
 
 
-;(where-parse article '[:id 1 :category.name "jjj" :reporter.full_name "eee"])
-;(let [*join-table (atom [["11" "22"]])]
-;  (swap! *join-table into [["aa" "bb"]])
-;  (println @*join-table)
-;  )
-
 
 (defmacro update!
   [model & {values :values where-condition :where debug? :debug? clean-data? :clean-data? :or {debug? false clean-data? true}}]
@@ -561,10 +509,6 @@
     `(jdbc/execute! (db-connection) ~query-vec)
     ))
 
-;(update! article {:category 2} :where [:id 2] :debug? true)
-;(update! article {:category 2 :headline "cc"} :where [:id 2 :category.name "aaa"] :debug? true)
-
-
 
 
 (defn update-or-insert!
@@ -572,21 +516,6 @@
   [model data & {where-condition :where debug? :debug? clean-data? :clean-data? :or {clean-data? true}}]
 
   )
-;(update-or-insert! article {:id 3 :headline "xxx" :cc "eeee"})
-
-;:---sys-meta {:name "article", :ns-name "laniu.core", :primary_key :id},
-;
-;
-;(defn update-or-insert!
-;  "Updates columns or inserts a new row in the specified table"
-;  [db table row where-clause]
-;  (jdbc/with-db-transaction [t-con db]
-;                            (let [result (jdbc/update! t-con table row where-clause)]
-;                              (if (zero? (first result))
-;                                (jdbc/insert! t-con table row)
-;                                result))))
-
-
 
 
 (defn get-select-fields-query
@@ -606,22 +535,12 @@
        @*join-table])
     ["*" nil]))
 
-;(get-select-fields-query article '[:id :headline :content [:reporter.full_name :full_name]
-;                                   [:reporter.id :vid]
-;                                   ])
-;
-;(get-select-fields-query article '[:id :headline :content :reporter.full_name
-;                                   [:reporter.id :vid]
-;                                   ])
-
 
 
 (defn get-join-table-query
   [join-table join-type]
   (map (fn [[t s]] (str join-type " JOIN " t " ON (" s ")"))
        join-table))
-
-(get-join-table-query '[["ceshi_reporter" "ceshi_article.reporter_id = ceshi_reporter.id"]] "inner")
 
 
 
@@ -647,35 +566,6 @@
 
 
 
-(defmacro select2
-  [model & {fields-list :fields where-condition :where debug? :debug?}]
-  (println fields-list)
-  )
-
-(select category
-        ;:fields [count (*)]
-        :aggregate ["count(*)"]
-        :debug? true
-        )
-
-(jdbc/query (db-connection) ["select count(id) as count, max(id) as max, min(id) as min, sum(id) as sum from ceshi_article"])
-
-
-
-;(select article
-;        :fields [:id :headline :content :reporter.full_name :category.name]
-;        :where [:reporter.full_name "aaa"]
-;        :debug? true
-;        )
-;
-;(select article
-;        :fields [:id :headline :content [:reporter.full_name :full_name] :category.name]
-;        :where [:id [in [1 2 3]]]
-;        :debug? true
-;        )
-
-
-
 (defmacro delete!
   [model & {where-condition :where debug? :debug?}]
   (let [model (get-model model)
@@ -691,201 +581,10 @@
     `(jdbc/execute! (db-connection) ~query-vec)))
 
 
-;(delete! article :where [:id 1] :debug? true)
-;(delete! article
-;         :where [:category.name "bbb"]
-;         :debug? true
-;         )
+
+(defonce *current-pooled-dbs (atom nil))
 
 
-
-
-
-(defmodel reporter
-          :fields {:full_name {:type :char-field :max-length 70}}
-          :meta {
-                 :db_table "ceshi_reporter"
-                 }
-          )
-
-(insert! reporter :values {:full_name "edison"})
-(insert! reporter :values {:full_name "chris"})
-
-(insert! reporter :values {:full_name2 "chris"})
-
-(defmodel category
-          :fields {:name       {:type :char-field :max-length 30}
-                   :sort_order {:type :int-field :default 0}
-                   }
-          :meta {
-                 :db_table "ceshi_category"
-                 }
-          )
-
-(insert! category :values {:name "IT" :sort_order 1})
-(insert! category :values {:name "Movie" :sort_order 2})
-(insert! category :values {:name "Fun" :sort_order 3})
-(insert! category :values {:name "Flower" :sort_order "a"})
-
-
-
-(defmodel user
-          :fields {
-                   :first-name {:type :char-field :verbose-name "First name" :max-length 30}
-                   :last-name  {:type :char-field :verbose-name "Last name" :max-length 30}
-                   :gender     {:type :tiny-int-field :verbose-name "Gender" :choices [[0, "uninput"], [1, "Male"], [2, "Female"]] :default 0}
-                   :created    {:type :int-field :verbose-name "Created" :default #(quot (System/currentTimeMillis) 1000)}
-                   })
-
-(macroexpand-1
-  '(defmodel user
-             "define a model"
-             :fields {
-                      :first-name {:type :char-field :verbose-name "First name" :max-length 30}
-                      :last-name  {:type :char-field :verbose-name "Last name" :max-length 30}
-                      :gender     {:type :tiny-int-field :verbose-name "Gender" :choices '((0, "uninput"), (1, "Male"), (2, "Female")) :default 0}
-                      :created    {:type :int-field :verbose-name "Created" :default #(quot (System/currentTimeMillis) 1000)}
-                      }))
-
-user
-(insert! user
-         :values {:first-name "Edison"
-                  :last-name  "Rao"
-                  :gender     4
-                  })
-
-
-(defmodel article
-          :fields {:headline   {:type :char-field :max-length 200}
-                   :content    {:type :text-field}
-                   :view_count {:type :int-field :default 0}
-                   :reporter   {:type :foreignkey :model reporter :on-delete :cascade}
-                   :category   {:type :foreignkey :model category :on-delete :set-null :blank true}
-                   :created    {:type :int-field :default #(quot (System/currentTimeMillis) 1000)}
-                   }
-          :meta {
-                 :db_table "ceshi_article"
-                 }
-          )
-
-(insert! article
-         :values {:headline "just a test"
-                  :content  "hello world"
-                  :reporter 1
-                  :category 3})
-
-(insert-multi! article
-               :values [{:headline "Apple make a phone"
-                         :content  "bala babla ...."
-                         :reporter 46
-                         :category 9}
-                        {:headline "A good movie recommend"
-                         :content  "bala babla ...."
-                         :reporter 45
-                         :category 10}
-                        {:headline "A funny joke"
-                         :content  "bala babla ...."
-                         :reporter 46
-                         :category 11}
-                        ])
-
-(jdbc/query (db-connection) ["select * from ceshi_article INNER JOIN ceshi_category ON (ceshi_article.category_id = ceshi_category.id) where ceshi_category.name= ?" "IT"]
-            )
-
-(select article :where [:id 7])
-
-(update! reporter
-         :values {:full_name "Edison Rao"}
-         :where [:id 45])
-(update! reporter
-         :values {:full_name "Chris Zheng"}
-         :where [:id 46])
-
-(update! article
-         :values {:category 9}
-         :where [:id 7])
-
-(update! article
-         :values {:category 9 :reporter 45}
-         :where [:id 7])
-
-
-
-(select category)
-
-
-(select category
-        :fields [:id [:name :category_name]]
-        :where [:name "IT"]
-        )
-
-; select with foreinkey field
-(select article
-        :fields [:id :headline :category.name]
-        :where [:id 7])
-
-
-(select article
-        :fields [:id :headline :category.name [:reporter.full_name :reporter_full_name]]
-        :where [:id 7])
-
-
-; select with forienkey condition
-
-(select article
-        :fields [:id :headline :content :category.name [:reporter.full_name :reporter_full_name]]
-        :where [:category.name "IT"])
-
-
-(select article
-        :fields [:id :headline :content :category.name :reporter.full_name]
-        :where [:category.name "IT" :reporter.full_name "Edison Rao"])
-
-; select where with function
-
-(select article
-        :where [:id [> 7]])
-
-(select article
-        :where [:headline [startswith "a"]])
-
-
-
-(update! article
-         :values {:view_count (+ :view_count 10)}
-         :where [:id 7])
-
-(delete! article :where [:id 3])
-
-(def a 30)
-(update! article
-         :values {:view_count (* :view_count a)}
-         :where [:id 7])
-
-
-(macroexpand-1
-  '(defmodel article
-             :fields {:headline   {:type :char-field :max-length 200}
-                      :content    {:type :text-field}
-                      :view_count {:type :int-field :default 0}
-                      :reporter   {:type :foreignkey :model reporter :on-delete :cascade}
-                      :category   {:type :foreignkey :model category :on-delete :set-null :blank? true}
-
-                      }
-             :meta {
-                    :db_table "ceshi_article"
-                    }
-             ))
-
-(let [a 1]
-  (throw "dd")
-  (println "ahaha")
-  )
-
-
-(tr)
-(Exception. "aaa")
-(AssertionError. "Wrong input.")
 
 (defn connection-pool
   [spec]
@@ -902,72 +601,32 @@ user
 
 
 
-(defn delay-pool
-  "Return a delay for creating a connection pool for the given spec."
-  [spec]
-  (delay (connection-pool spec)))
-
-(def delay-pooled-db (delay (connection-pool db-spec)))
-
-
-(defn db-connection [] @delay-pooled-db)
-
-
-
-
-(db-connection)
-
-(jdbc/query (db-connection) ["select * from ceshi_article INNER JOIN ceshi_category ON (ceshi_article.category_id = ceshi_category.id) where ceshi_category.name= ?" "IT"]
-            )
-
-
+(defn db-connection
+  [& {:keys [action db]}]
+  (let [pooled-db @*current-pooled-dbs]
+    (if db
+      @(get pooled-db db)
+      (if (= action :read)
+        ; 需要把读改为随机读取
+        @(get pooled-db (get-in pooled-db [:___db_by_action :read 0]))
+        @(get pooled-db (get-in pooled-db [:___db_by_action :write 0]))
+        ))))
 
 
 
 (defn defdb
   [db-settings]
-  (prn db-settings)
-  )
+  (let [*db-by-action (atom {:read [] :write []})]
+    (reset! *current-pooled-dbs
+            (reduce (fn [r [k v]]
+                      (let [p (:permission v)]
+                        (if (contains? #{:read :read_and_write} p)
+                          (swap! *db-by-action update-in [:read] conj k))
+                        (if (not= :read p)
+                          (swap! *db-by-action update-in [:write] conj k)))
 
-(defdb
-  {:default   {
-               :classname   "com.mysql.jdbc.Driver"
-               :subprotocol "mysql"
-               :subname     "//127.0.0.1:3306/projectx2"
-               :user        "root"
-               :password    "123"
-               :useSSL      false
-               :role        :read_and_write
-               }
-   :read-db1  {:classname   "com.mysql.jdbc.Driver"
-               :subprotocol "mysql"
-               :subname     "//127.0.0.1:3306/projectx3"
-               :user        "root"
-               :password    "123"
-               :useSSL      false
-               :role        :read
-               }
-   :read-db2  {:classname   "com.mysql.jdbc.Driver"
-               :subprotocol "mysql"
-               :subname     "//127.0.0.1:3306/projectx4"
-               :user        "root"
-               :password    "123"
-               :useSSL      false
-               :role        :read
-               }
-   :write-db1 {:classname   "com.mysql.jdbc.Driver"
-               :subprotocol "mysql"
-               :subname     "//127.0.0.1:3306/users"
-               :user        "root"
-               :password    "123"
-               :useSSL      false
-               :role        :write}
-   :write-db2 {:classname   "com.mysql.jdbc.Driver"
-               :subprotocol "mysql"
-               :subname     "//127.0.0.1:3306/customers"
-               :user        "root"
-               :password    "123"
-               :useSSL      false
-               :role        :write
-               }
-   })
+                      (assoc r k (delay (connection-pool v))))
+                    {} db-settings))
+    (swap! *current-pooled-dbs assoc :___db_by_action @*db-by-action)
+    ))
+
