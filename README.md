@@ -6,10 +6,8 @@ A Clojure library designed to normal human that don't like SQL, well, if you don
 
 ## Usage
 
-
+### define a model
 ``` clojure
-
-;define a model
 
 (defmodel reporter
           :fields {:full_name {:type :char-field :max-length 70}}
@@ -40,9 +38,11 @@ A Clojure library designed to normal human that don't like SQL, well, if you don
                  }
           )
 
+```
 
-;insert a data
+### insert data
 
+``` clojure
 (insert! reporter :values {:full_name "edison"})
 ;=> ({:generated_key 45})
 
@@ -64,8 +64,11 @@ A Clojure library designed to normal human that don't like SQL, well, if you don
                   :reporter 45
                   :category 11})
 ; => ({:generated_key 6})
+```
 
-; insert multi rows
+### insert multi rows
+
+``` clojure
 (insert-multi! article
                :values [{:headline "Apple make a phone"
                          :content  "bala babla ...."
@@ -82,6 +85,11 @@ A Clojure library designed to normal human that don't like SQL, well, if you don
                         ])
 ;=> ({:generated_key 7} {:generated_key 8} {:generated_key 9})
 
+```
+
+### update data
+
+``` clojure
 ; update
 (update! reporter
          :values {:full_name "Edison Rao"}
@@ -104,6 +112,10 @@ A Clojure library designed to normal human that don't like SQL, well, if you don
          :values {:category 9 :reporter 45}
          :where [:id 7])
 ; => (1)
+```
+
+### select data
+``` clojure
 
 ; select
 (select category)
@@ -130,15 +142,22 @@ A Clojure library designed to normal human that don't like SQL, well, if you don
 ;=> 
 ({:id 9, :name "IT"} {:id 12, :name "IT"})
 
-; select with field alias
+```
+
+### select with field alias
+
+``` clojure
 (select category
         :fields [:id [:name :category_name]]
         :where [:name "IT"]
         )
 ;=> 
 ({:id 9, :category_name "IT"} {:id 12, :category_name "IT"})
+```
 
-; select foreinkey field
+### select foreinkey field
+
+``` clojure
 (select article
         :fields [:id :headline :category.name]
         :where [:id 7])
@@ -151,7 +170,11 @@ A Clojure library designed to normal human that don't like SQL, well, if you don
         :where [:id 7])
 ;=> 
 ({:id 7, :headline "Apple make a phone", :name "IT", :reporter_full_name "Edison Rao"})
+```
 
+### select foreinkey condition
+
+``` clojure
 ; select with forienkey condition
 (select article
         :fields [:id :headline :content :category.name [:reporter.full_name :reporter_full_name]]
@@ -167,16 +190,24 @@ A Clojure library designed to normal human that don't like SQL, well, if you don
 ; => 
 ({:id 7, :headline "Apple make a phone", :content "bala babla ....", :name "IT", :full_name "Edison Rao"})
 
-; others
-; select where with function
+```
+
+### select with function
+
+``` clojure
+; select with function
 (select article
         :where [:id [> 7]])
 
 (select article
         :where [:headline [startswith "a"]])
+```
 
 
-; update with function
+
+### update with function
+
+``` clojure
 (update! article
          :values {:view_count (+ :view_count 10)})
 
@@ -184,8 +215,12 @@ A Clojure library designed to normal human that don't like SQL, well, if you don
 (update! article
          :values {:view_count (* :view_count a)}
          :where [:id 7])
+```
 
-; delete a article
+
+###  delete data
+
+``` clojure
 (delete! article :where [:id 3])
 
 
