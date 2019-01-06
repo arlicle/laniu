@@ -6,6 +6,20 @@ A Clojure library designed to normal human that don't like SQL, well, if you don
 
 ## Usage
 
+### config the database connection
+
+``` clojure
+(def db-spec
+  {
+   :classname   "com.mysql.jdbc.Driver"
+   :subprotocol "mysql"
+   :subname     "//127.0.0.1:3306/projectx2"
+   :user        "root"
+   :password    "123"
+   :useSSL      false}
+  )
+```
+
 ### define a model
 ``` clojure
 
