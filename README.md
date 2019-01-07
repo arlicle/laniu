@@ -332,6 +332,14 @@ with and & or
         )
 ["select ceshi_article.id, ceshi_article.headline, ceshi_category.name, ceshi_reporter.full_name from ceshi_article  INNER JOIN ceshi_reporter ON (ceshi_article.reporter_id = ceshi_reporter.id) INNER JOIN ceshi_category ON (ceshi_article.category_id = ceshi_category.id) where (ceshi_category.name= ? or ceshi_reporter.full_name= ?) and (ceshi_category.name= ? or ceshi_reporter.full_name= ?)" "IT" "Edison Rao" "Fun" "Chris Zheng"]
 => ({:id 13, :headline "just a test", :name "Fun", :full_name "Edison Rao"})
+
+It's same to 
+
+(select article
+        :fields [:id :headline :category.name :reporter.full_name]
+        :where [(or :category.name "IT" :reporter.full_name "Edison Rao") (or :category.name "Fun" :reporter.full_name "Chris Zheng")]
+        :debug? true
+        )
 ```
 
 
