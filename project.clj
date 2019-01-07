@@ -1,6 +1,9 @@
-(defproject laniu "0.1.0-SNAPSHOT"
-  :description "FIXME: write description"
-  :url "http://example.com/FIXME"
+(defproject laniu "0.1.1-SNAPSHOT"
+  :description "It’s django model for clojure. \n\n
+
+  A Clojure library designed to normal human that don't like SQL, well, if you don't like SQL , that part is up to you.
+  "
+  :url "https://github.com/arlicle/laniu"
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
   :dependencies [[org.clojure/clojure "1.10.0"]

@@ -5,6 +5,51 @@
             ))
 
 
+(defonce *current-pooled-dbs (atom nil))
+
+(defn db-connection
+  [& {:keys [action db]}]
+  (let [pooled-db @*current-pooled-dbs]
+    (if db
+      @(get pooled-db db)
+      (if (= action :read)
+        ; 需要把读改为随机读取
+        @(get pooled-db (get-in pooled-db [:___db_by_action :read 0]))
+        @(get pooled-db (get-in pooled-db [:___db_by_action :write 0]))
+        ))))
+
+
+
+(defn connection-pool
+  [spec]
+  (let [cpds (doto (ComboPooledDataSource.)
+               (.setDriverClass (:classname spec))
+               (.setJdbcUrl (str "jdbc:" (:subprotocol spec) ":" (:subname spec)))
+               (.setUser (:user spec))
+               (.setPassword (:password spec))
+               ;; expire excess connections after 30 minutes of inactivity:
+               (.setMaxIdleTimeExcessConnections (* 30 60))
+               ;; expire connections after 3 hours of inactivity:
+               (.setMaxIdleTime (* 3 60 60)))]
+    {:datasource cpds}))
+
+
+
+(defn defdb
+  [db-settings]
+  (let [*db-by-action (atom {:read [] :write []})]
+    (reset! *current-pooled-dbs
+            (reduce (fn [r [k v]]
+                      (let [p (:permission v)]
+                        (if (or (nil? p) (contains? #{:read :read_and_write} p))
+                          (swap! *db-by-action update-in [:read] conj k))
+                        (if (not= :read p)
+                          (swap! *db-by-action update-in [:write] conj k)))
+
+                      (assoc r k (delay (connection-pool v))))
+                    {} db-settings))
+    (swap! *current-pooled-dbs assoc :___db_by_action @*db-by-action)
+    ))
 
 
 
@@ -219,6 +264,63 @@
 
 
 
+(defn- get-model-db-name
+  [model]
+  (get-in model [:---meta :db_table])
+  )
+
+
+
+(defn get-field-db-column
+  [model field]
+  (get-in model [field :db_column])
+  )
+
+
+
+
+(defn get-model-name
+  [model]
+  (get-in model [:---sys-meta :name])
+  )
+
+
+(defn get-model&table-name
+  [model]
+  [(get-model-name model) (get-model-db-name model)]
+  )
+
+
+
+(defn check-model-field
+  "
+  check is field exists and is field type correct
+  if is not correct , throw exception
+  "
+  ([model field] (check-model-field model field nil))
+  ([model field field-type]
+   (if (not (contains? (:---fields model) field))
+     (throw (Exception. (str "field " field " is not in model " (get-model-name model)))))
+   (if (and field-type (not= (get-in model [field :type]) field-type))
+     (throw (Exception. (str "only :foreignkey field can related search. "
+                             field " is not a foreignkey field. "
+                             field "'s type is " (or (get-in model [field :type]) "nil")
+                             ))))
+   true))
+
+
+
+(defn get-foreignkey-to-field-db-column
+  [model foreignkey-field]
+  (get-in model [foreignkey-field :type])
+  (let [to-field (get-in model [foreignkey-field :to_field])]
+    (if (keyword? to-field)
+      (get-in model [foreignkey-field :model to-field :db_column])
+      to-field
+      )
+    )
+  )
+
 
 (defn get-field-db-name
   [model k *join-table]
@@ -253,101 +355,21 @@
                        (:---fields model))))
 
 
-(defn- get-model-db-name
-  [model]
-  (get-in model [:---meta :db_table])
-  )
 
-(defn get-field-db-column
-  [model field]
-  (get-in model [field :db_column])
-  )
+(defn get-join-table-query
+  [join-table join-type]
+  (map (fn [[t s]] (str join-type " JOIN " t " ON (" s ")"))
+       join-table))
 
 
 
-(defn get-foreignkey-to-field-db-column
-  [model foreignkey-field]
-  (get-in model [foreignkey-field :type])
-  (let [to-field (get-in model [foreignkey-field :to_field])]
-    (if (keyword? to-field)
-      (get-in model [foreignkey-field :model to-field :db_column])
-      to-field
-      )
-    )
-  )
 
 
 
-(defn get-model-name
-  [model]
-  (get-in model [:---sys-meta :name])
-  )
-
-
-(defn get-model&table-name
-  [model]
-  [(get-model-name model) (get-model-db-name model)]
-  )
-
-
-(defn insert!
-  "insert the data into the database."
-  [model & {:keys [values debug? clean-data?] :or {debug? false clean-data? true}}]
-  (let [[model-name db-table-name] (get-model&table-name model)]
-    (if (s/valid? (keyword (str (ns-name *ns*)) model-name) values)
-      (let [new-data
-            (if clean-data?
-              (clean-insert-model-data model values)
-              values
-              )]
-        (when debug?
-          (prn "insert data to db " (keyword db-table-name) " : " new-data))
-        (jdbc/insert! (db-connection) (keyword db-table-name) new-data))
-      (s/explain-data (keyword (str (ns-name *ns*)) model-name) values)
-      )))
 
 
 
-(defn insert-multi!
-  "一次插入多条数据"
-  [model & {:keys [values debug? clean-data?] :or {debug? false clean-data? true}}]
-  (let [[model-name db-table-name] (get-model&table-name model)
-        model-key (keyword (str (ns-name *ns*)) model-name)
-        new-items (if clean-data?
-                    (map-indexed (fn [idx item]
-                                   (if (s/valid? model-key item)
-                                     (clean-insert-model-data model item)
-                                     (throw (Exception. (str "error-data in row : " idx " , " item)))
-                                     )
-                                   ) values)
-                    values
-                    )
-        ]
 
-    (when debug?
-      (prn "db:" (keyword db-table-name) " items:" new-items))
-
-    (jdbc/insert-multi! (db-connection) (keyword db-table-name) new-items)
-    )
-  )
-
-
-
-(defn check-model-field
-  "
-  check is field exists and is field type correct
-  if is not correct , throw exception
-  "
-  ([model field] (check-model-field model field nil))
-  ([model field field-type]
-   (if (not (contains? (:---fields model) field))
-     (throw (Exception. (str "field " field " is not in model " (get-model-name model)))))
-   (if (and field-type (not= (get-in model [field :type]) field-type))
-     (throw (Exception. (str "only :foreignkey field can related search. "
-                             field " is not a foreignkey field. "
-                             field "'s type is " (or (get-in model [field :type]) "nil")
-                             ))))
-   true))
 
 
 
@@ -487,6 +509,75 @@
 
 
 
+
+
+
+(defn get-select-fields-query
+  [model fields]
+  (if (seq fields)
+    (let [*join-table (atom [])]
+      [(clojure.string/join ", "
+                            (map (fn [k]
+                                   (if (= (type k) clojure.lang.Keyword)
+                                     ; 一种是字段直接就是关键字，表示字段名
+                                     (get-field-db-name model k *join-table)
+                                     ; 一种字段是有中括号，表示有别名
+                                     (let [[k0 k1] k]
+                                       (str (get-field-db-name model k0 *join-table) " as " (name k1))
+                                       )))
+                                 fields))
+       @*join-table])
+    ["*" nil]))
+
+
+
+
+
+
+
+(defn insert!
+  "insert the data into the database."
+  [model & {:keys [values debug? clean-data?] :or {debug? false clean-data? true}}]
+  (let [[model-name db-table-name] (get-model&table-name model)]
+    (if (s/valid? (keyword (str (ns-name *ns*)) model-name) values)
+      (let [new-data
+            (if clean-data?
+              (clean-insert-model-data model values)
+              values
+              )]
+        (when debug?
+          (prn "insert data to db " (keyword db-table-name) " : " new-data))
+        (jdbc/insert! (db-connection) (keyword db-table-name) new-data))
+      (s/explain-data (keyword (str (ns-name *ns*)) model-name) values)
+      )))
+
+
+
+(defn insert-multi!
+  "一次插入多条数据"
+  [model & {:keys [values debug? clean-data?] :or {debug? false clean-data? true}}]
+  (let [[model-name db-table-name] (get-model&table-name model)
+        model-key (keyword (str (ns-name *ns*)) model-name)
+        new-items (if clean-data?
+                    (map-indexed (fn [idx item]
+                                   (if (s/valid? model-key item)
+                                     (clean-insert-model-data model item)
+                                     (throw (Exception. (str "error-data in row : " idx " , " item)))
+                                     )
+                                   ) values)
+                    values
+                    )
+        ]
+
+    (when debug?
+      (prn "db:" (keyword db-table-name) " items:" new-items))
+
+    (jdbc/insert-multi! (db-connection) (keyword db-table-name) new-items)
+    )
+  )
+
+
+
 (defmacro update!
   [model & {values :values where-condition :where debug? :debug? clean-data? :clean-data? :or {debug? false clean-data? true}}]
   (let [model (get-model model)
@@ -511,53 +602,24 @@
 
 
 
-(defn update-or-insert!
-  "to be continue"
-  [model & {values :values where-condition :where debug? :debug? clean-data? :clean-data? :or {debug? false clean-data? true}}]
-  (let [t-con (db-connection)
-        pk-key (get-in model [:---sys-meta :primary_key])
-        pk (pk-key values)
-        where-condition (if (empty? where-condition)
-                          (if (not pk)
-                            (throw (Exception. "values must have pk or where condition can't empty"))
-                            [pk-key pk])
-                          where-condition)]
+(comment
+  (defmacro update-or-insert!
+    "to be continue"
+    [model & {values :values where-condition :where debug? :debug? clean-data? :clean-data? :or {debug? false clean-data? true}}]
+    (let [t-con (db-connection)
+          pk-key (get-in model [:---sys-meta :primary_key])
+          pk (pk-key values)
+          where-condition (if (empty? where-condition)
+                            (if (not pk)
+                              (throw (Exception. "values must have pk or where condition can't empty"))
+                              [pk-key pk])
+                            where-condition)]
 
-    (jdbc/with-db-transaction [t-con db-spec]
-                              (let [result (update! model :values values :where where-condition :debug? debug)]
-                                (if (zero? (first result))
-                                  (insert! model :values values :debug? debug)
-                                  result)))
-
-    )
-  )
-
-
-
-(defn get-select-fields-query
-  [model fields]
-  (if (seq fields)
-    (let [*join-table (atom [])]
-      [(clojure.string/join ", "
-                            (map (fn [k]
-                                   (if (= (type k) clojure.lang.Keyword)
-                                     ; 一种是字段直接就是关键字，表示字段名
-                                     (get-field-db-name model k *join-table)
-                                     ; 一种字段是有中括号，表示有别名
-                                     (let [[k0 k1] k]
-                                       (str (get-field-db-name model k0 *join-table) " as " (name k1))
-                                       )))
-                                 fields))
-       @*join-table])
-    ["*" nil]))
-
-
-
-(defn get-join-table-query
-  [join-table join-type]
-  (map (fn [[t s]] (str join-type " JOIN " t " ON (" s ")"))
-       join-table))
-
+      (jdbc/with-db-transaction [t-con db-spec]
+                                (let [result (update! model :values values :where where-condition :debug? debug)]
+                                  (if (zero? (first result))
+                                    (insert! model :values values :debug? debug)
+                                    result))))))
 
 
 (defmacro select
@@ -598,51 +660,6 @@
 
 
 
-(defonce *current-pooled-dbs (atom nil))
 
 
-
-(defn connection-pool
-  [spec]
-  (let [cpds (doto (ComboPooledDataSource.)
-               (.setDriverClass (:classname spec))
-               (.setJdbcUrl (str "jdbc:" (:subprotocol spec) ":" (:subname spec)))
-               (.setUser (:user spec))
-               (.setPassword (:password spec))
-               ;; expire excess connections after 30 minutes of inactivity:
-               (.setMaxIdleTimeExcessConnections (* 30 60))
-               ;; expire connections after 3 hours of inactivity:
-               (.setMaxIdleTime (* 3 60 60)))]
-    {:datasource cpds}))
-
-
-
-(defn db-connection
-  [& {:keys [action db]}]
-  (let [pooled-db @*current-pooled-dbs]
-    (if db
-      @(get pooled-db db)
-      (if (= action :read)
-        ; 需要把读改为随机读取
-        @(get pooled-db (get-in pooled-db [:___db_by_action :read 0]))
-        @(get pooled-db (get-in pooled-db [:___db_by_action :write 0]))
-        ))))
-
-
-
-(defn defdb
-  [db-settings]
-  (let [*db-by-action (atom {:read [] :write []})]
-    (reset! *current-pooled-dbs
-            (reduce (fn [r [k v]]
-                      (let [p (:permission v)]
-                        (if (contains? #{:read :read_and_write} p)
-                          (swap! *db-by-action update-in [:read] conj k))
-                        (if (not= :read p)
-                          (swap! *db-by-action update-in [:write] conj k)))
-
-                      (assoc r k (delay (connection-pool v))))
-                    {} db-settings))
-    (swap! *current-pooled-dbs assoc :___db_by_action @*db-by-action)
-    ))
 
