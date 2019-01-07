@@ -331,6 +331,25 @@ When you define a model, the defmodel will auto define a data spec, when you ins
 
 ```
 
+### run raw sql
+
+If you need a more complex form of sql, you can use `raw-query` and `raw-execute!`
+
+`raw-query` for select
+
+``` sql
+(raw-query ["SELECT * FROM ceshi_article where id=?" 15])
+
+(raw-query ["SELECT * FROM ceshi_reporter where id=?" 15] {:as-arrays? true})
+```
+
+`raw-execute!` for insert, update, delete ...
+``` sql
+(raw-execute! ["update ceshi_article set content='jjjjj' where id=?" 15])
+
+(raw-execute! ["update ceshi_article set view_count = ( 2 * view_count ) where view_count < ?" 50])
+```
+
 ## To do list
 #### Document
 #### Create table
