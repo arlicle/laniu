@@ -6,10 +6,10 @@ A Clojure library designed to normal human that don't like SQL, well, if you don
 
 PS. It's provide connection pooling by `c3p0` library
 
-## Leiningen/Boot
+### Leiningen/Boot
 [![Clojars Project](https://clojars.org/laniu/latest-version.svg)](https://clojars.org/laniu)
 
-## Dependency Information
+### Dependency Information
 Requires Clojure 1.9 or later!
 
 ## Usage
@@ -24,9 +24,7 @@ Requires Clojure 1.9 or later!
              :subname     "//127.0.0.1:3306/projectx2"
              :user        "root"
              :password    "123"
-             :useSSL      false
-             }}
-  )
+             :useSSL      false}})
 ```
 
 ### Multiple databases
@@ -49,8 +47,7 @@ This setting maps database aliases, which are a way to refer to a specific datab
              :password    "123"
              :useSSL      false
              :operation   :read
-             }
-   })
+             }})
 ; the default :poeratin is :read_and_write
 ```
 
