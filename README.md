@@ -102,7 +102,9 @@ If the field has :default config, It will auto fill the default value to the fie
 (insert! category :values {:name "Movie" :sort_order 2})
 ;=> ({:generated_key 10})
 
-(insert! category :values {:name "Fun" :sort_order 3})
+; add :debug? true will print the sql info
+(insert! category :values {:name "Fun" :sort_order 3} :debug? true)
+"insert data to db " :ceshi_category " : " {"ceshi_category.name" "Fun", "ceshi_category.sort_order" 3}
 ;=> ({:generated_key 11})
 ```
 
@@ -206,7 +208,9 @@ When you define a model, the defmodel will auto define a data spec, when you ins
 ; update with multi conditions
 (update! reporter
          :values {:full_name "Chris Zheng"}
-         :where [:id 46 :full_name "chris"])
+         :where [:id 46 :full_name "chris"]
+         :debug? true)
+["update ceshi_reporter   set ceshi_reporter.full_name=? where ceshi_reporter.id= ? and ceshi_reporter.full_name= ?" "Chris Zheng" 46 "chris"]
 ; => (1)
 
 ; update value , search with foreignkey model
@@ -257,7 +261,9 @@ When you define a model, the defmodel will auto define a data spec, when you ins
 (select category
         :fields [:id [:name :category_name]]
         :where [:name "IT"]
+        :debug? true
         )
+["select ceshi_category.id, ceshi_category.name as category_name from ceshi_category   where ceshi_category.name= ?" "IT"]
 ;=> 
 ({:id 9, :category_name "IT"} {:id 12, :category_name "IT"})
 ```
@@ -419,10 +425,10 @@ Returns the aggregate values (avg, sum, count, min, max), the aggregate field wi
 
 ``` clojure
 (aggregate article
-           :fields [(count :id) (max :view_count) (min :view_count) (avg :view_count) (sum :view_count)])
-=> 
-({:count__id 13, :max__view_count 600, :min__view_count 20, :avg__view_count 67.6923M, :sum__view_count 880M})
-
+           :fields [(count :id) (max :view_count) (min :view_count) (avg :view_count) (sum :view_count)]
+           :debug? true)
+["select count(ceshi_article.id) as count__id, max(ceshi_article.view_count) as max__view_count, min(ceshi_article.view_count) as min__view_count, avg(ceshi_article.view_count) as avg__view_count, sum(ceshi_article.view_count) as sum__view_count from ceshi_article  "]
+=> ({:count__id 13, :max__view_count 600, :min__view_count 20, :avg__view_count 67.6923M, :sum__view_count 880M})
 ```
 
 ### run raw sql
