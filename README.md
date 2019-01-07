@@ -13,7 +13,10 @@ PS. It's provide connection pooling by `c3p0` library
 [![Clojars Project](https://clojars.org/laniu/latest-version.svg)](https://clojars.org/laniu)
 
 ### Dependency Information
+
 Requires Clojure 1.9 or later!
+
+And I Just test mysql 5.7.20 now, It will support more database later.
 
 ## Usage
 
