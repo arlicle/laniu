@@ -1,4 +1,4 @@
-(defproject laniu "0.1.1-SNAPSHOT"
+(defproject laniu "0.1.2-SNAPSHOT"
   :description "It’s django model for clojure. \n\n
 
   A Clojure library designed to normal human that don't like SQL, well, if you don't like SQL , that part is up to you.
