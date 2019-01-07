@@ -12,7 +12,7 @@ pom.xml.asc
 .lein-failures
 .nrepl-port
 .cpcache/
-
+.DS_Store
 .idea/
 laniu.iml
 learn.clj

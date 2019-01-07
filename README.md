@@ -34,7 +34,7 @@ This setting maps database aliases, which are a way to refer to a specific datab
              :user        "root"
              :password    "123"
              :useSSL      false
-             :permission  :write
+             :operation   :read_and_write ; :operation types: :read :write :read_and_write
              }
    :read-db {:classname   "com.mysql.jdbc.Driver"
              :subprotocol "mysql"
@@ -42,9 +42,10 @@ This setting maps database aliases, which are a way to refer to a specific datab
              :user        "root"
              :password    "123"
              :useSSL      false
-             :permission  :read
+             :operation   :read
              }
    })
+; the default :poeratin is :read_and_write
 ```
 
 ### define a model

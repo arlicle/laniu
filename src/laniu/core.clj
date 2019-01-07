@@ -40,7 +40,7 @@
   (let [*db-by-action (atom {:read [] :write []})]
     (reset! *current-pooled-dbs
             (reduce (fn [r [k v]]
-                      (let [p (:permission v)]
+                      (let [p (:operation v)]
                         (if (or (nil? p) (contains? #{:read :read_and_write} p))
                           (swap! *db-by-action update-in [:read] conj k))
                         (if (not= :read p)
