@@ -1,5 +1,6 @@
 (ns laniu.core
   (:import (com.mchange.v2.c3p0 ComboPooledDataSource))
+  (:import java.util.Date)
   (:require [clojure.spec.alpha :as $s]
             [clojure.java.jdbc :as jdbc]
             [clojure.tools.logging :as log]
@@ -73,6 +74,8 @@
   [{field-type :type primary_key? :primary_key?}]
   [`int?])
 
+
+
 (defn- foreignkey-spec
   "
   A many-to-one relationship.
@@ -82,6 +85,8 @@
   "
   [{field-type :type model :model on-delete :on-delete blank? :blank?}]
   [`int?])
+
+
 
 (defn- char-field-spec
   "
@@ -100,6 +105,8 @@
     (filterv identity [`string? max-length-spec choices-spec])
     ))
 
+
+
 (defn- text-field-spec
   "
   A string field, for small- to large-sized strings.
@@ -116,6 +123,7 @@
 
     (filterv identity [`string? max-length-spec choices-spec])
     ))
+
 
 
 (defn- int-field-spec
@@ -142,6 +150,63 @@
 
     (filterv identity [`int? max-value-spec min-value-spec choices-spec])
     ))
+
+
+
+(defn- big-int-field-spec
+  "
+  An integer. Values from -9223372036854775808 to 9223372036854775807 are safe in all databases.
+  "
+  [opts]
+  (let [
+        max-value (:max-value opts)
+        min-value (:min-value opts)
+
+        max-value (if (and max-value (> max-value 9223372036854775807)) 2147483647 max-value)
+        min-value (if (and min-value (< min-value -9223372036854775808)) -9223372036854775808 min-value)
+
+        max-value-spec (if max-value
+                         `#(<= % ~max-value))
+        min-value-spec (if min-value
+                         `#(>= % ~min-value))
+
+        choices-spec (if-let [choices (:choices opts)]
+                       (let [choices-map (into {} choices)]
+                         `#(contains? ~choices-map %)))
+        ]
+
+    (filterv identity [`int? max-value-spec min-value-spec choices-spec])
+    ))
+
+
+(defn- small-int-field-spec
+  "
+  Like an integer-field, but only allows values under a certain (database-dependent) point.
+  Values from  -32768 to 32767 are safe in all databases.
+  "
+  [opts]
+  (let [
+        max-value (:max-value opts)
+        min-value (:min-value opts)
+
+        max-value (if (and max-value (> max-value 32767)) 32767 max-value)
+        min-value (if (and min-value (< min-value -32768)) -32768 min-value)
+
+        max-value-spec (if max-value
+                         `#(<= % ~max-value))
+        min-value-spec (if min-value
+                         `#(>= % ~min-value))
+
+        choices-spec (if-let [choices (:choices opts)]
+                       (let [choices-map (into {} choices)]
+                         `#(contains? ~choices-map %)))
+        ]
+
+
+    (filterv identity [`int? max-value-spec min-value-spec choices-spec])
+    ))
+
+
 
 
 (defn- tiny-int-field-spec
@@ -171,6 +236,49 @@
     (filterv identity [`int? max-value-spec min-value-spec choices-spec])
     ))
 
+
+
+(defn- float-field-spec
+  "
+  A floating-point number
+  "
+  [opts]
+  (let [
+        max-value (:max-value opts)
+        min-value (:min-value opts)
+
+        max-value-spec (if max-value
+                         `#(<= % ~max-value))
+        min-value-spec (if min-value
+                         `#(>= % ~min-value))
+
+        choices-spec (if-let [choices (:choices opts)]
+                       (let [choices-map (into {} choices)]
+                         `#(contains? ~choices-map %)))
+        ]
+
+
+    (filterv identity [`float? max-value-spec min-value-spec choices-spec])
+    ))
+
+
+
+(defn- boolean-field-spec
+  "
+   A true/false field.
+  "
+  [{field-type :type model :model blank? :blank?}]
+  [`boolean?])
+
+
+
+(defn- date-field-spec
+  "
+   A date, represented in clojure by a java.util.Date instance.
+  "
+  [{field-type :type model :model blank? :blank?}]
+  (let [date-spec `#(instance? Date %)]
+    [date-spec]))
 
 
 
@@ -663,6 +771,9 @@
     `(jdbc/execute! (db-connection) ~query-vec)))
 
 
+(defmacro aggregate
+  []
+  )
 
 
 
