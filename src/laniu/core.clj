@@ -263,6 +263,7 @@
 
 
 
+
 (defn- boolean-field-spec
   "
    A true/false field.
@@ -771,10 +772,26 @@
     `(jdbc/execute! (db-connection) ~query-vec)))
 
 
-(defmacro aggregate
-  []
+(defn aggregate
+  [model args]
+  (mapv (fn a-func [[op k]]
+          (let [k2 (if (keyword? k) (get-field-db-name model k nil) (a-func k))]
+            (str op "(" k2 ")")
+            )
+          ) args)
   )
 
 
+(defn raw-query
+  "raw sql query for select"
+  [& args]
+  (apply jdbc/query (db-connection) args)
+  )
+
+(defn raw-execute!
+  "raw sql for insert, update, delete ..."
+  [& args]
+  (apply jdbc/execute! (db-connection) args)
+  )
 
 
