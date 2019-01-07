@@ -323,11 +323,6 @@ When you define a model, the defmodel will auto define a data spec, when you ins
 
 ``` clojure
 (delete! article :where [:id 3])
-
-
-
-; count
-
 ```
 
 ### aggregate
