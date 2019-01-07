@@ -14,6 +14,10 @@ Requires Clojure 1.9 or later!
 
 ## Usage
 
+``` clojure
+(require '[laniu.core :refer :all])
+```
+
 ### config the database connection
 
 ``` clojure
