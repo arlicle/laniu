@@ -1,0 +1,5 @@
+*.clj linguist-language=clojure
+*.js linguist-language=clojure
+*.css linguist-language=clojure
+*.html linguist-language=clojure
+*.md linguist-language=clojure
