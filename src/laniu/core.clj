@@ -1,7 +1,8 @@
 (ns laniu.core
   (:import (com.mchange.v2.c3p0 ComboPooledDataSource))
-  (:require [clojure.spec.alpha :as s]
+  (:require [clojure.spec.alpha :as $s]
             [clojure.java.jdbc :as jdbc]
+            [clojure.tools.logging :as log]
             ))
 
 
@@ -49,9 +50,9 @@
                       (assoc r k (delay (connection-pool v))))
                     {} db-settings))
     (if (empty? (:read @*db-by-action))
-      (println "Warning: No read database config."))
+      (log/warn "Warning: No read database config."))
     (if (empty? (:write @*db-by-action))
-      (println "Warning: No write database config."))
+      (log/warn "Warning: No write database config."))
     (swap! *current-pooled-dbs assoc :___db_by_action @*db-by-action)))
 
 
@@ -230,9 +231,9 @@
 
     `(do
        ~@(for [[k field-opts] fields-configs]
-           `(s/def
+           `($s/def
               ~(keyword (str ns-name "." (name model-name)) (name k))
-              (s/and
+              ($s/and
                 ~@(case (:type field-opts)
                     :char-field
                     (char-field-spec field-opts)
@@ -256,8 +257,8 @@
                       (println "(:type field-opts):" (:type field-opts))
                       ['string?])))))
 
-       (s/def ~(keyword ns-name (name model-name))
-         (s/keys :req-un ~req-fields
+       ($s/def ~(keyword ns-name (name model-name))
+         ($s/keys :req-un ~req-fields
                  :opt-un ~opt-fields
                  ))
 
@@ -542,7 +543,7 @@
   "insert the data into the database."
   [model & {:keys [values debug? clean-data?] :or {debug? false clean-data? true}}]
   (let [[model-name db-table-name] (get-model&table-name model)]
-    (if (s/valid? (keyword (str (ns-name *ns*)) model-name) values)
+    (if ($s/valid? (keyword (str (ns-name *ns*)) model-name) values)
       (let [new-data
             (if clean-data?
               (clean-insert-model-data model values)
@@ -551,7 +552,7 @@
         (when debug?
           (prn "insert data to db " (keyword db-table-name) " : " new-data))
         (jdbc/insert! (db-connection) (keyword db-table-name) new-data))
-      (s/explain-data (keyword (str (ns-name *ns*)) model-name) values)
+      ($s/explain-data (keyword (str (ns-name *ns*)) model-name) values)
       )))
 
 
@@ -563,7 +564,7 @@
         model-key (keyword (str (ns-name *ns*)) model-name)
         new-items (if clean-data?
                     (map-indexed (fn [idx item]
-                                   (if (s/valid? model-key item)
+                                   (if ($s/valid? model-key item)
                                      (clean-insert-model-data model item)
                                      (throw (Exception. (str "error-data in row : " idx " , " item)))
                                      )
