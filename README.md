@@ -325,9 +325,20 @@ When you define a model, the defmodel will auto define a data spec, when you ins
 (delete! article :where [:id 3])
 
 
-; aggregates
 
 ; count
+
+```
+
+### aggregate
+
+Returns the aggregate values (avg, sum, count, min, max), the aggregate field will return count__id, max__view_count.
+
+``` clojure
+(aggregate article
+           :fields [(count :id) (max :view_count) (min :view_count) (avg :view_count) (sum :view_count)])
+=> 
+({:count__id 13, :max__view_count 600, :min__view_count 20, :avg__view_count 67.6923M, :sum__view_count 880M})
 
 ```
 

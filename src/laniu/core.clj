@@ -12,14 +12,15 @@
 (defn db-connection
   [& {:keys [action db]}]
   (let [pooled-db @*current-pooled-dbs]
-    (if db
-      @(get pooled-db db)
-      (if (= action :read)
-        ; 需要把读改为随机读取
-        @(get pooled-db (get-in pooled-db [:___db_by_action :read 0]))
-        @(get pooled-db (get-in pooled-db [:___db_by_action :write 0]))
-        ))))
-
+    (if (empty? pooled-db)
+      (throw (Exception. "Error: No database connection."))
+      (if db
+        @(get pooled-db db)
+        (if (= action :read)
+          ; 需要把读改为随机读取
+          @(get pooled-db (get-in pooled-db [:___db_by_action :read 0]))
+          @(get pooled-db (get-in pooled-db [:___db_by_action :write 0]))
+          )))))
 
 
 (defn connection-pool
@@ -368,8 +369,8 @@
 
        ($s/def ~(keyword ns-name (name model-name))
          ($s/keys :req-un ~req-fields
-                 :opt-un ~opt-fields
-                 ))
+                  :opt-un ~opt-fields
+                  ))
 
        (def ~(symbol model-name)
          ~models-fields
@@ -577,7 +578,6 @@
 
 
 
-
 (defn where-parse
   [model where-condition]
   (let [[op where-condition] (if (list? where-condition)
@@ -622,9 +622,6 @@
 
 
 
-
-
-
 (defn get-select-fields-query
   [model fields]
   (if (seq fields)
@@ -644,7 +641,16 @@
 
 
 
-
+(defn get-aggregate-fields-query
+  [model fields]
+  (map (fn a-func [[op k] & x]
+         (let [[k2 as-k] (if (keyword? k)
+                           [(get-field-db-name model k nil) (str " as " op "__" (name k))]
+                           (a-func k true))]
+           (if (nil? x)
+             (str op "(" k2 ")" as-k)
+             [(str op "(" k2 ")") as-k])))
+       fields))
 
 
 
@@ -772,14 +778,24 @@
     `(jdbc/execute! (db-connection) ~query-vec)))
 
 
-(defn aggregate
-  [model args]
-  (mapv (fn a-func [[op k]]
-          (let [k2 (if (keyword? k) (get-field-db-name model k nil) (a-func k))]
-            (str op "(" k2 ")")
-            )
-          ) args)
-  )
+
+(defmacro aggregate
+  "Returns the aggregate values (averages, sums, count etc.) "
+  [model & {fields-list :fields where-condition :where debug? :debug?}]
+  (let [model (get-model model)
+        fields-query-strs (get-aggregate-fields-query model fields-list)
+        [where-query-str values where-join-table] (where-parse model where-condition)
+        where-query-str (if where-query-str (str "where " where-query-str))
+        where-join-query-strs (get-join-table-query (set where-join-table) "INNER")
+        sql (str "select " (clojure.string/join ", " fields-query-strs) " from " (get-model-db-name model) " "
+                 (clojure.string/join " " where-join-query-strs) " "
+                 where-query-str)
+        query-vec (into [sql] values)]
+    (when debug?
+      (prn query-vec))
+    `(jdbc/query (db-connection) ~query-vec)
+    ))
+
 
 
 (defn raw-query
