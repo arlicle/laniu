@@ -10,16 +10,16 @@
 (defonce *current-pooled-dbs (atom nil))
 
 (defn db-connection
-  [& {:keys [action db]}]
+  [& {:keys [operation db]}]
   (let [pooled-db @*current-pooled-dbs]
     (if (empty? pooled-db)
       (throw (Exception. "Error: No database connection."))
       (if db
         @(get pooled-db db)
-        (if (= action :read)
+        (if (= operation :read)
           ; 需要把读改为随机读取
-          @(get pooled-db (get-in pooled-db [:___db_by_action :read 0]))
-          @(get pooled-db (get-in pooled-db [:___db_by_action :write 0]))
+          @(get pooled-db (get-in (meta pooled-db) [:db_for_operation :read 0]))
+          @(get pooled-db (get-in (meta pooled-db) [:db_for_operation :write 0]))
           )))))
 
 
@@ -42,20 +42,21 @@
   [db-settings]
   (let [*db-by-action (atom {:read [] :write []})]
     (reset! *current-pooled-dbs
-            (reduce (fn [r [k v]]
-                      (let [p (:operation v)]
-                        (if (or (nil? p) (contains? #{:read :read_and_write} p))
-                          (swap! *db-by-action update-in [:read] conj k))
-                        (if (not= :read p)
-                          (swap! *db-by-action update-in [:write] conj k)))
+            (with-meta
+              (reduce (fn [r [k v]]
+                        (let [p (:operation v)]
+                          (if (or (nil? p) (contains? #{:read :read_and_write} p))
+                            (swap! *db-by-action update-in [:read] conj k))
+                          (if (not= :read p)
+                            (swap! *db-by-action update-in [:write] conj k)))
 
-                      (assoc r k (delay (connection-pool v))))
-                    {} db-settings))
+                        (assoc r k (delay (connection-pool v))))
+                      {} db-settings)
+              {:db_for_operation @*db-by-action}))
     (if (empty? (:read @*db-by-action))
       (log/warn "Warning: No read database config."))
     (if (empty? (:write @*db-by-action))
-      (log/warn "Warning: No write database config."))
-    (swap! *current-pooled-dbs assoc :___db_by_action @*db-by-action)))
+      (log/warn "Warning: No write database config."))))
 
 
 
