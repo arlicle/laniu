@@ -1,8 +1,11 @@
 # laniu
 
-It’s django model for clojure
+Laniu can help you rapid development and clean.
+
+It’s django model for clojure.
 
 A Clojure library designed to normal human that don't like SQL, well, if you don't like SQL , that part is up to you.
+
 
 PS. It's provide connection pooling by `c3p0` library
 
