@@ -58,7 +58,7 @@ This setting maps database aliases, which are a way to refer to a specific datab
              :useSSL      false
              :operation   :read
              }})
-; the default :poeratin is :read_and_write
+; the default :operation is :read_and_write
 ```
 
 ### define a model
@@ -261,6 +261,71 @@ When you define a model, the defmodel will auto define a data spec, when you ins
 ;=> 
 ({:id 9, :category_name "IT"} {:id 12, :category_name "IT"})
 ```
+
+
+### select with or/and 
+
+The default is and
+``` clojure
+(select article
+        :fields [:id :headline :category.name :reporter.full_name]
+        :where [:category.name "IT" :reporter.full_name "Edison Rao"]
+        :debug? true
+        )
+["select ceshi_article.id, ceshi_article.headline, ceshi_category.name, ceshi_reporter.full_name from ceshi_article  INNER JOIN ceshi_reporter ON (ceshi_article.reporter_id = ceshi_reporter.id) INNER JOIN ceshi_category ON (ceshi_article.category_id = ceshi_category.id) where ceshi_category.name= ? and ceshi_reporter.full_name= ?" "IT" "Edison Rao"]
+=> 
+({:id 7, :headline "Apple make a phone", :name "IT", :full_name "Edison Rao"})
+
+;It's the same to 
+(select article
+        :fields [:id :headline :category.name :reporter.full_name]
+        :where (and :category.name "IT" :reporter.full_name "Edison Rao")
+        :debug? true
+        )
+["select ceshi_article.id, ceshi_article.headline, ceshi_category.name, ceshi_reporter.full_name from ceshi_article  INNER JOIN ceshi_reporter ON (ceshi_article.reporter_id = ceshi_reporter.id) INNER JOIN ceshi_category ON (ceshi_article.category_id = ceshi_category.id) where (ceshi_category.name= ? and ceshi_reporter.full_name= ?)" "IT" "Edison Rao"]
+=> 
+({:id 7, :headline "Apple make a phone", :name "IT", :full_name "Edison Rao"})
+```
+
+with or
+
+``` clojure
+(select article
+        :fields [:id :headline :category.name :reporter.full_name]
+        :where (or :category.name "IT" :reporter.full_name "Edison Rao")
+        :debug? true
+        )
+["select ceshi_article.id, ceshi_article.headline, ceshi_category.name, ceshi_reporter.full_name from ceshi_article  INNER JOIN ceshi_reporter ON (ceshi_article.reporter_id = ceshi_reporter.id) INNER JOIN ceshi_category ON (ceshi_article.category_id = ceshi_category.id) where (ceshi_category.name= ? or ceshi_reporter.full_name= ?)" "IT" "Edison Rao"]
+=>
+({:id 7, :headline "Apple make a phone", :name "IT", :full_name "Edison Rao"}
+ {:id 13, :headline "just a test", :name "Fun", :full_name "Edison Rao"}
+ {:id 14, :headline "Apple make a phone", :name "IT", :full_name "aaa"}
+ {:id 15, :headline "A good movie recommend", :name "Movie", :full_name "Edison Rao"})
+```
+
+with and & or
+
+``` clojure
+(select article
+        :fields [:id :headline :category.name :reporter.full_name]
+        :where (or [:category.name "IT" :reporter.full_name "Edison Rao"] [:category.name "Fun" :reporter.full_name "Chris Zheng"])
+        :debug? true
+        )
+["select ceshi_article.id, ceshi_article.headline, ceshi_category.name, ceshi_reporter.full_name from ceshi_article  INNER JOIN ceshi_reporter ON (ceshi_article.reporter_id = ceshi_reporter.id) INNER JOIN ceshi_category ON (ceshi_article.category_id = ceshi_category.id) where (ceshi_category.name= ? and ceshi_reporter.full_name= ?) or (ceshi_category.name= ? and ceshi_reporter.full_name= ?)" "IT" "Edison Rao" "Fun" "Chris Zheng"]
+=>
+({:id 7, :headline "Apple make a phone", :name "IT", :full_name "Edison Rao"}
+ {:id 16, :headline "A funny joke", :name "Fun", :full_name "Chris Zheng"})
+
+;It's the same to 
+(select article
+        :fields [:id :headline :category.name :reporter.full_name]
+        :where (or (and :category.name "IT" :reporter.full_name "Edison Rao") (and :category.name "Fun" :reporter.full_name "Chris Zheng"))
+        :debug? true
+        )
+
+```
+
+
 
 ### select foreignkey field
 
