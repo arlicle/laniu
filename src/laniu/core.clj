@@ -48,8 +48,11 @@
 
                       (assoc r k (delay (connection-pool v))))
                     {} db-settings))
-    (swap! *current-pooled-dbs assoc :___db_by_action @*db-by-action)
-    ))
+    (if (empty? (:read @*db-by-action))
+      (println "Warning: No read database config."))
+    (if (empty? (:write @*db-by-action))
+      (println "Warning: No write database config."))
+    (swap! *current-pooled-dbs assoc :___db_by_action @*db-by-action)))
 
 
 
