@@ -68,12 +68,12 @@
 
   By default, Laniu gives each model the following field:
 
-  :id {:type :auto-field :primary_key? true}
+  :id {:type :auto-field ::primary-key? true}
 
-  If you’d like to specify a custom primary key, just specify :primary_key? true on one of your fields.
-  If Laniu sees you’ve explicitly set :primary_key? true, it won’t add the automatic id column.
+  If you’d like to specify a custom primary key, just specify :primary-key? true on one of your fields.
+  If Laniu sees you’ve explicitly set :primary-key? true, it won’t add the automatic id column.
   "
-  [{field-type :type primary_key? :primary_key?}]
+  [{field-type :type primary-key? :primary-key?}]
   [`int?])
 
 
@@ -292,7 +292,7 @@
   [fields]
   (let [*primary_key (atom nil)
         new-fields (reduce (fn [r [k v]]
-                             (if (:primary_key? v)
+                             (if (:primary-key? v)
                                (reset! *primary_key k))
                              (assoc r k
                                       (case (:type v)
@@ -302,7 +302,7 @@
                                         ))
                              ) {} fields)]
     (if (not @*primary_key)
-      [(assoc new-fields :id {:type :auto-field :primary_key? true :db_column "id"}) :id]
+      [(assoc new-fields :id {:type :auto-field :primary-key? true :db_column "id"}) :id]
       [new-fields @*primary_key])))
 
 
@@ -322,7 +322,6 @@
   (let [
         ns-name (str (ns-name *ns*))
         default_db_name (str (clojure.string/join "_" (rest (clojure.string/split ns-name #"\."))) "_" model-name)
-        meta-configs (merge {:db_table default_db_name} meta-configs)
         {req-fields :req opt-fields :opt opt-fields2 :opt2}
         (reduce (fn [r [k v]]
                   (if (or (= :auto-field (:type v)) (contains? v :default) (:blank? v))
@@ -334,11 +333,13 @@
                   ) {:req [] :opt [] :opt2 {}} fields-configs)
 
         [fields-configs pk] (optimi-model-fields fields-configs)
-        models-fields (assoc fields-configs
-                        :---fields (set (keys fields-configs))
-                        :---default-value-fields opt-fields2
-                        :---sys-meta {:name (name model-name) :ns-name ns-name :primary_key pk}
-                        :---meta meta-configs)]
+        models-fields (with-meta fields-configs {
+                                                 :fields               (set (keys fields-configs))
+                                                 :default-value-fields opt-fields2
+                                                 :name (name model-name)
+                                                 :ns-name ns-name
+                                                 :primary-key pk
+                                                 :meta                 (merge {:db_table default_db_name} meta-configs)})]
 
     `(do
        ~@(for [[k field-opts] fields-configs]
@@ -381,8 +382,7 @@
 
 (defn- get-model-db-name
   [model]
-  (get-in model [:---meta :db_table])
-  )
+  (get-in (meta model) [:meta :db_table]))
 
 
 
@@ -392,12 +392,24 @@
   )
 
 
+(defn get-model-fields
+  [model]
+  (:fields (meta model)))
 
+
+(defn get-model-default-fields
+  [model]
+  (:default-value-fields (meta model)))
+
+
+
+(defn get-model-primary-key
+  [model]
+  (:primary-key (meta model)))
 
 (defn get-model-name
   [model]
-  (get-in model [:---sys-meta :name])
-  )
+  (:name (meta model)))
 
 
 (defn get-model&table-name
@@ -414,7 +426,7 @@
   "
   ([model field] (check-model-field model field nil))
   ([model field field-type]
-   (if (not (contains? (:---fields model) field))
+   (if (not (contains? (get-model-fields model) field))
      (throw (Exception. (str "field " field " is not in model " (get-model-name model)))))
    (if (and field-type (not= (get-in model [field :type]) field-type))
      (throw (Exception. (str "only :foreignkey field can related search. "
@@ -444,7 +456,7 @@
       ; 获取其它表的表明，替换第一个部分
       (let [foreignkey-field (keyword foreingnkey-field-name)
             _ (check-model-field model foreignkey-field)
-            join-model-db-name (get-in model [foreignkey-field :model :---meta :db_table])]
+            join-model-db-name (get-model-db-name (get-in model [foreignkey-field :model]))]
         (if *join-table
           (swap! *join-table conj [join-model-db-name
                                    (str model-db-table "."
@@ -466,8 +478,8 @@
             (assoc r (get-field-db-name model k nil)
                      (if (fn? v) (v) v)))
           {}
-          (select-keys (merge (:---default-value-fields model) data)
-                       (:---fields model))))
+          (select-keys (merge (get-model-default-fields model) data)
+                       (get-model-fields model))))
 
 
 
@@ -475,16 +487,6 @@
   [join-table join-type]
   (map (fn [[t s]] (str join-type " JOIN " t " ON (" s ")"))
        join-table))
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -513,7 +515,7 @@
 (defn clean-data
   "return the valid field data"
   [model data]
-  (select-keys data (:---fields model))
+  (select-keys data (get-model-fields model))
   )
 
 
@@ -730,7 +732,7 @@
     "to be continue"
     [model & {values :values where-condition :where debug? :debug? clean-data? :clean-data? :or {debug? false clean-data? true}}]
     (let [t-con (db-connection)
-          pk-key (get-in model [:---sys-meta :primary_key])
+          pk-key (get-model-primary-key model)
           pk (pk-key values)
           where-condition (if (empty? where-condition)
                             (if (not pk)
