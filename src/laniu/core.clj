@@ -554,10 +554,11 @@
 
 (defn check-where-func
   [op]
-  (if (not (contains? #{'or 'and} op))
-    (throw (Exception. (str "() must first of function 'or' or 'and', " op " is not valid.")))
+  (if (not (contains? #{'or 'and 'not} op))
+    (throw (Exception. (str "() must first of function 'or'/'and'/'not', " op " is not valid.")))
     )
   true)
+
 
 
 (defn parse-sql-func
@@ -608,8 +609,6 @@
           (reduce (fn [r where-condition2]
                     (let [[fields-str2 vals2 join-table] (where-parse model where-condition2)]
                       (swap! *join-table into join-table)
-                      ;(swap! *join-table update-in [0] into (get join-table 0))
-                      ;(swap! *join-table update-in [1] into (get join-table 1))
                       (-> r
                           (update-in [0] conj (str "(" fields-str2 ")"))
                           (update-in [1] #(apply conj %1 %2) vals2))
@@ -617,8 +616,12 @@
                   [[] []]
                   where-condition))]
     (if (seq fields)
-      [(clojure.string/join (str " " op " ") fields) vals @*join-table]
-      )))
+      (if (= 'not op)
+        (if (> (count fields) 1)
+          (throw (Exception. (str "not operation only can contains one collection. (not [:id 1 :headline \"xxx\"]) "
+                                  fields " has " (count fields) " .")))
+          [(str "not " (clojure.string/join " " fields)) vals @*join-table])
+        [(clojure.string/join (str " " op " ") fields) vals @*join-table]))))
 
 
 
