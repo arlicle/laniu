@@ -240,6 +240,34 @@
 
 
 
+(defn- pos-tiny-int-field-spec
+  "
+  Like an integer-field, but only allows values under a certain (database-dependent) point.
+  Values from 0 to 255 are safe in all databases.
+  "
+  [opts]
+  (let [
+        max-value (:max-value opts)
+        min-value (:min-value opts)
+
+        max-value (if (and max-value (> max-value 255)) 255 max-value)
+        min-value (if (and min-value (< min-value 0)) 0 min-value)
+
+        max-value-spec (if max-value
+                         `#(<= % ~max-value))
+        min-value-spec (if min-value
+                         `#(>= % ~min-value))
+
+        choices-spec (if-let [choices (:choices opts)]
+                       (let [choices-map (into {} choices)]
+                         `#(contains? ~choices-map %)))
+        ]
+
+    (filterv identity [`int? max-value-spec min-value-spec choices-spec])
+    ))
+
+
+
 (defn- float-field-spec
   "
   A floating-point number
@@ -580,8 +608,7 @@
             " IS NOT NULL "
             ) nil]
     (in :in) [(str " in " "(" (clojure.string/join "," (repeat (count v) "?")) ")") v]
-    [" **** " " none "]
-    ))
+    [" **** " " none "]))
 
 
 
@@ -676,8 +703,7 @@
         (when debug?
           (prn "insert data to db " (keyword db-table-name) " : " new-data))
         (jdbc/insert! (db-connection) (keyword db-table-name) new-data))
-      ($s/explain-data (keyword (str (ns-name *ns*)) model-name) values)
-      )))
+      ($s/explain-data (keyword (str (ns-name *ns*)) model-name) values))))
 
 
 
@@ -693,16 +719,12 @@
                                      (throw (Exception. (str "error-data in row : " idx " , " item)))
                                      )
                                    ) values)
-                    values
-                    )
-        ]
+                    values)]
 
     (when debug?
       (prn "db:" (keyword db-table-name) " items:" new-items))
 
-    (jdbc/insert-multi! (db-connection) (keyword db-table-name) new-items)
-    )
-  )
+    (jdbc/insert-multi! (db-connection) (keyword db-table-name) new-items)))
 
 
 

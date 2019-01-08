@@ -2,46 +2,61 @@
   (:require [clojure.test :refer :all]
             [laniu.core :refer :all]))
 
-(deftest a-test
-  (testing "FIXME, I fail."
-    (is (= 0 1))))
+
+(defdb
+  {:default {
+             :classname   "com.mysql.jdbc.Driver"
+             :subprotocol "mysql"
+             :subname     "//127.0.0.1:3306/projectx2"
+             :user        "root"
+             :password    "123"
+             :useSSL      false
+             }}
+  )
+
+(defmodel Author
+          :fields {:name {:type :char-field :max-length 30}
+                   :age  {:type :tiny-int-field}}
+          :meta {:db_table "ceshi_author"})
 
 
-(defmodel reporter
-          :fields {:full_name {:type :char-field :max-length 70}}
-          :meta {
-                 :db_table "ceshi_reporter"})
+(insert! Author :values {:name "Chris" :age 23})
 
-(defmodel category
-          :fields {:name       {:type :char-field :max-length 30}
-                   :sort_order {:type :int-field :default 0}
-                   }
-          :meta {
-                 :db_table "ceshi_category"
-                 }
-          )
+(select Author)
 
-(defmodel article
-          :fields {:headline   {:type :char-field :max-length 200}
-                   :content    {:type :text-field}
-                   :view_count {:type :int-field :default 0}
-                   :reporter   {:type :foreignkey :model reporter :on-delete :cascade}
-                   :category   {:type :foreignkey :model category :on-delete :set-null :blank true}
-                   :created    {:type :int-field :default #(quot (System/currentTimeMillis) 1000)}
-                   }
-          :meta {
-                 :db_table "ceshi_article"
-                 }
-          )
+(def AuthorBook)
+
+(def xf (comp (filter odd?) (map inc)))
+(transduce xf + (range 5))
+
+class Person(models.Model):
+friends = models.ManyToManyField("self")
+
+(defmodel Node
+          :fields {:title {:type :char-field :max-length 60}
+                   :parent {:type :foreignkey :model :self}
+                   })
 
 
+(defmodel Publisher
+          :fields {:name {:type :char-field :max-length 60}}
+          :meta {:db_table "ceshi_publisher"})
 
 
-(prn (get-aggregate-fields-query article '[(count :id) (sum :view_count) (avg :id) (ceiling (avg :created))]))
+(defmodel Book
+          :fields {:name    {:type :char-field :max-length 60}
+                   :pages   {:type :int-field}
+                   :price   {:type :float-field :default 0}
+                   :rating  {:type :tiny-int-field :choices [[-1 "未评分"] [0 "0分"] [1 "1分"] [2 "2分"] [3 "3分"] [4 "4分"] [5 "5分"]]}
+                   :authors {:type :many-to-many-field :model Publisher}
+                   :pubdate {:type :date-field}}
+          :meta {:db_table "ceshi_book"})
+
+
+(defmodel Store
+          :fields {:name  {:type :char-field :max-length 60}
+                   :books {:type :many-to-many-field :model Book}}
+          :meta {:db_table "ceshi_store"})
 
 
 
-(aggregate article
-           :fields [(count :id) (max :view_count) (min :view_count) (avg :view_count) (sum :view_count)]
-           :debug? true
-           )
