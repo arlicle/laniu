@@ -336,9 +336,9 @@
         models-fields (with-meta fields-configs {
                                                  :fields               (set (keys fields-configs))
                                                  :default-value-fields opt-fields2
-                                                 :name (name model-name)
-                                                 :ns-name ns-name
-                                                 :primary-key pk
+                                                 :name                 (name model-name)
+                                                 :ns-name              ns-name
+                                                 :primary-key          pk
                                                  :meta                 (merge {:db_table default_db_name} meta-configs)})]
 
     `(do
@@ -515,8 +515,8 @@
 (defn clean-data
   "return the valid field data"
   [model data]
-  (select-keys data (get-model-fields model))
-  )
+  (select-keys data (get-model-fields model)))
+
 
 
 (defn get-update!-fields-query
@@ -555,6 +555,7 @@
   )
 
 
+
 (defn check-where-func
   [op]
   (if (not (contains? #{'or 'and 'not} op))
@@ -565,12 +566,14 @@
 
 
 (defn parse-sql-func
-  [[func-name v]]
+  [[func-name v args]]
   (case func-name
     > [" > ?" v]
     >= [" >= ?" v]
     < [" < ?" v]
     <= [" <= ?" v]
+    not= [" <> ?" v]
+    rawsql [(str " " v) args]
     (startswith :startswith) [" like ?" (str v "%")]
     nil? [(if v
             " IS NULL "
@@ -593,14 +596,14 @@
         (if (keyword? (first where-condition))
           (reduce (fn [r [k v]]
                     (let [[s-type new-val]                  ;查询类型
-                          (if (vector? v)
+                          (if (or (vector? v) (list? v))
                             ; 如果是vector进行单独的处理
                             (parse-sql-func v)
 
                             ; 否则就是普通的值, 直接等于即可
                             ["= ?" v]
                             )
-                          conj-func (if (vector? new-val)
+                          conj-func (if (or (vector? new-val) (list? new-val))
                                       #(apply conj %1 %2)
                                       conj)]
                       (-> r
@@ -718,7 +721,7 @@
                  fields-str " " where-query-str)
         query-vec (-> [sql]
                       (into fields-values)
-                      (into values))]
+                      (into (filter #(not (nil? %)) values)))]
     (when debug?
       (prn query-vec))
 
@@ -758,11 +761,14 @@
         diff-join-table (clojure.set/difference (set field-join-table) set-where-join-table)
         fields-join-query-strs (get-join-table-query diff-join-table "LEFT")
         where-join-query-strs (get-join-table-query set-where-join-table "INNER")
-        sql (str "select " fields-str " from " (get-model-db-name model) " "
-                 (clojure.string/join " " fields-join-query-strs) " "
-                 (clojure.string/join " " where-join-query-strs) " "
-                 where-query-str)
-        query-vec (into [sql] values)]
+        sql (str "select " fields-str " from " (get-model-db-name model)
+                 (when (seq fields-join-query-strs)
+                   (str " " (clojure.string/join " " fields-join-query-strs)))
+                 (when (seq where-join-query-strs)
+                   (str " " (clojure.string/join " " where-join-query-strs)))
+                 (when (and where-query-str (not= "" where-query-str))
+                   (str " " where-query-str)))
+        query-vec (into [sql] (filter #(not (nil? %)) values))]
     (when debug?
       (prn query-vec))
     `(jdbc/query (db-connection) ~query-vec)))

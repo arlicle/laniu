@@ -404,10 +404,34 @@ with `not`, `not` only can contains one collection. (not [:id 1 :headline "xxx"]
 ``` clojure
 ; select with function
 (select article
-        :where [:id [> 7]])
+        :where [:id (> 7)])
 
 (select article
-        :where [:headline [startswith "a"]])
+        :where [:id (not= 7)]
+        :debug? true)
+["select * from ceshi_article   where ceshi_article.id <> ?" 7]
+
+(select article
+        :where [:id (in [6 7 8])]
+        :debug? true)
+["select * from ceshi_article   where ceshi_article.id in (?,?,?)" 6 7 8]
+
+(select article
+        :where [:headline (startswith "a")]
+        :debug? true)
+["select * from ceshi_article   where ceshi_article.headline like ?" "a%"]
+
+; you can also use original sql function with rawsql
+(select article
+        :where [:id (rawsql "in (6,7,8)")]
+        :debug? true)
+["select * from ceshi_article where ceshi_article.id in (6,7,8)"]
+
+; or 
+(select article
+        :where [:id (rawsql "in (?,?,?)" [6 7 8])]
+        :debug? true)
+["select * from ceshi_article where ceshi_article.id in (?,?,?)" 6 7 8]
 ```
 
 
