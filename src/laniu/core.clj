@@ -344,10 +344,12 @@
 
 
 (defn create-model-db-name
+  "create a default model db name"
   [model-name ns-name]
-  (clojure.string/lower-case (str (clojure.string/replace (clojure.string/join "_" (rest (clojure.string/split ns-name #"\."))) #"\-" "_") "_" model-name))
-  )
-
+  (clojure.string/lower-case
+    (clojure.string/replace
+      (str (clojure.string/join "_" (let [[a & b :as c] (clojure.string/split ns-name #"\.")]
+                                      (if (seq b) b [a]))) "_" model-name) #"\-" "_")))
 
 
 

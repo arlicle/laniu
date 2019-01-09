@@ -77,6 +77,13 @@
                    :pubdate {:type :int-field}}
           :meta {:db_table "ceshi_book"})
 
+
+
+(defmodel tree-data)
+
+
+(create-model-db-name "model-name" "ns-name.fdfa-fdsaf")
+
 (meta Book)
 (macroexpand-1
   '(defmodel Book
