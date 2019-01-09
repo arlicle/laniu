@@ -59,6 +59,10 @@
 
 ;(get-field-db-name Node :parent.title)
 
+
+(def a '({:generated_key 10} {:generated_key 11} {:generated_key 12} {:generated_key 13}))
+
+(map (fn [{:keys [generated_key]}] generated_key) a)
 (select Node
         :fields [:title [:parent.title :parent_title]]
         :debug? true)
@@ -95,6 +99,12 @@
                      :pubdate {:type :int-field}}
             :meta {:db_table "ceshi_book"}))
 
+
+(def a '({:generated_key 50}))
+
+(let [[{:keys [generated_key]}] '({:generated_key 50})]
+  (println "generated_key" generated_key)
+  )
 
 (defmodel Store
           :fields {:name  {:type :char-field :max-length 60}

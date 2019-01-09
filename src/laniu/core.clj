@@ -783,8 +783,10 @@
         (println "mdata" mdata)
         (when debug?
           (prn "insert data to db " (keyword db-table-name) " : " insert-data))
-        (jdbc/insert! (db-connection) (keyword db-table-name) insert-data))
+        (let [[{:keys [generated_key]}] (jdbc/insert! (db-connection) (keyword db-table-name) insert-data)]
+          generated_key))
       ($s/explain-data (keyword (str (ns-name *ns*)) model-name) values))))
+
 
 
 
@@ -796,14 +798,15 @@
         new-items (if clean-data?
                     (map-indexed (fn [idx item]
                                    (if ($s/valid? model-key item)
-                                     (clean-insert-model-data model item)
+                                     (first (clean-insert-model-data model item))
                                      (throw (Exception. (str "error-data in row : " idx " , " item)))
                                      )
                                    ) values)
                     values)]
     (when debug?
       (prn "db:" (keyword db-table-name) " items:" new-items))
-    (jdbc/insert-multi! (db-connection) (keyword db-table-name) new-items)))
+    (let [result (jdbc/insert-multi! (db-connection) (keyword db-table-name) new-items)]
+      (map (fn [{:keys [generated_key]}] generated_key) result))))
 
 
 
@@ -827,7 +830,6 @@
                       (into (filter #(not (nil? %)) values)))]
     (when debug?
       (prn query-vec))
-
     `(jdbc/execute! (db-connection) ~query-vec)))
 
 
