@@ -789,7 +789,6 @@
 
 
 
-
 (defn insert-multi!
   "一次插入多条数据"
   [model & {:keys [values debug? clean-data?] :or {debug? false clean-data? true}}]
@@ -830,7 +829,7 @@
                       (into (filter #(not (nil? %)) values)))]
     (when debug?
       (prn query-vec))
-    `(jdbc/execute! (db-connection) ~query-vec)))
+    `(first (jdbc/execute! (db-connection) ~query-vec))))
 
 
 

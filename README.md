@@ -91,21 +91,21 @@ If the field has :default config, It will auto fill the default value to the fie
 
 ``` clojure
 (insert! reporter :values {:full_name "edison"})
-;=> ({:generated_key 45})
+;=> 45
 
 (insert! reporter :values {:full_name "chris"})
-;=> ({:generated_key 46})
+;=> 46
 
 (insert! category :values {:name "IT" :sort_order 1})
-;=> ({:generated_key 9})
+;=> 9
 
 (insert! category :values {:name "Movie" :sort_order 2})
-;=> ({:generated_key 10})
+;=> 10
 
 ; add :debug? true will print the sql info
 (insert! category :values {:name "Fun" :sort_order 3} :debug? true)
 "insert data to db " :ceshi_category " : " {"ceshi_category.name" "Fun", "ceshi_category.sort_order" 3}
-;=> ({:generated_key 11})
+;=> 11
 ```
 
 
@@ -119,7 +119,7 @@ If the field has :default config, It will auto fill the default value to the fie
                   :content  "hello world"
                   :reporter 45
                   :category 11})
-; => ({:generated_key 6})
+; => 6
 ```
 
 ### insert wrong data with spec error
@@ -192,7 +192,7 @@ When you define a model, the defmodel will auto define a data spec, when you ins
                          :reporter 46
                          :category 11}
                         ])
-;=> ({:generated_key 7} {:generated_key 8} {:generated_key 9})
+;=> (7 8 9)
 
 ```
 
@@ -203,7 +203,7 @@ When you define a model, the defmodel will auto define a data spec, when you ins
 (update! reporter
          :values {:full_name "Edison Rao"}
          :where [:id 45])
-; => (1)
+; => 1
 
 ; update with multi conditions
 (update! reporter
@@ -211,18 +211,18 @@ When you define a model, the defmodel will auto define a data spec, when you ins
          :where [:id 46 :full_name "chris"]
          :debug? true)
 ["update ceshi_reporter   set ceshi_reporter.full_name=? where ceshi_reporter.id= ? and ceshi_reporter.full_name= ?" "Chris Zheng" 46 "chris"]
-; => (1)
+; => 1
 
 ; update value , search with foreignkey model
 (update! article
          :values {:reporter 1}
          :where [:category.name "IT"])
-; => (1)
+; => 1
 
 (update! article
          :values {:category 9 :reporter 45}
          :where [:id 7])
-; => (1)
+; => 1
 ```
 
 ### select data
