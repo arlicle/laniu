@@ -570,9 +570,12 @@
 (defn clean-insert-model-data
   [model data]
   (reduce (fn [r [k v]]
-            (println k)
-            (if (= :many-to-many-field (get-in model [k :type]))
+            (cond
+              (= :many-to-many-field (get-in model [k :type]))
               (assoc-in r [1 k] (if (fn? v) (v) v))
+              (and (get-in model [k :primary-key?]) (not v))
+              r
+              :else
               (assoc-in r [0 (get-field-db-name model k)] (if (fn? v) (v) v))))
           [{} {}]
           (select-keys (merge (get-model-default-fields model) data)
@@ -782,8 +785,6 @@
               values
               )
             ]
-        (println "insert-data" insert-data)
-        (println "mdata" mdata)
         (when debug?
           (prn "insert data to db " (keyword db-table-name) " : " insert-data))
         (let [[{:keys [generated_key]}] (jdbc/insert! (db-connection) (keyword db-table-name) insert-data)]

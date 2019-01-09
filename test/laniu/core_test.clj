@@ -85,6 +85,28 @@ Author
           :fields {:name {:type :char-field :max-length 60}}
           :meta {:db_table "ceshi_publisher"})
 
+(insert! Publisher :values {:name "ccc"} :debug? true)
+
+(insert-multi! Publisher
+               :values [
+                        {:name "aaa"}
+                        {:name "aaa"}
+                        {:name "aaa"}
+                        {:name "aaa"}
+                        {:name "aaa"}
+                        {:name "aaa"}
+                        {:name "aaa"}
+                        {:name "aaa"}
+                        {:name "aaa"}
+                        {:name "aaa"}
+                        {:name "aaa"}
+                        ]
+               :debug? true
+               )
+
+(update! Publisher :values {:name "ccccJJJ" :where [:id 44]})
+(select Publisher :where [:id 44])
+
 (defmodel Book
           :fields {:name    {:type :char-field :max-length 60}
                    :pages   {:type :int-field}
