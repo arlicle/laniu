@@ -203,11 +203,8 @@
                        (let [choices-map (into {} choices)]
                          `#(contains? ~choices-map %)))
         ]
-
-
     (filterv identity [`int? max-value-spec min-value-spec choices-spec])
     ))
-
 
 
 
@@ -262,7 +259,6 @@
                        (let [choices-map (into {} choices)]
                          `#(contains? ~choices-map %)))
         ]
-
     (filterv identity [`int? max-value-spec min-value-spec choices-spec])
     ))
 
@@ -290,7 +286,6 @@
 
     (filterv identity [`float? max-value-spec min-value-spec choices-spec])
     ))
-
 
 
 
@@ -335,15 +330,6 @@
       [new-fields @*primary_key])))
 
 
-(macroexpand-1
-  '(defmodel Node
-             :fields {:title     {:type :char-field :max-length 60}
-                      :parent    {:type :foreignkey :model :self}
-                      :nest_node {:type :foreignkey :model :self}
-                      :copy_node {:type :foreignkey :model :self}
-                      :user      {:type :foreignkey :model User}
-                      }
-             :meta [:db_table "ceshi_node"]))
 
 (defmacro defmodel
   "A model is the single, definitive source of information about your data.
@@ -372,13 +358,14 @@
                   ) {:req [] :opt [] :opt2 {}} fields-configs)
 
 
-        models-fields (with-meta fields-configs {
-                                                 :fields               (set (keys fields-configs))
-                                                 :default-value-fields opt-fields2
-                                                 :name                 (name model-name)
-                                                 :ns-name              ns-name
-                                                 :primary-key          pk
-                                                 :meta                 (merge {:db_table default_db_name} meta-configs)})]
+        models-fields (with-meta fields-configs
+                                 {
+                                  :fields               (set (keys fields-configs))
+                                  :default-value-fields opt-fields2
+                                  :name                 (name model-name)
+                                  :ns-name              ns-name
+                                  :primary-key          pk
+                                  :meta                 (merge {:db_table default_db_name} meta-configs)})]
 
     `(do
        ~@(for [[k field-opts] fields-configs]
@@ -425,9 +412,7 @@
      (get-model-db-name model2)
      (if (keyword? model1)
        (throw (Exception. (model1 " is not valid model. do you want use :self ?")))
-       (get-model-db-name model1))
-     )
-    )
+       (get-model-db-name model1))))
   ([model]
    (get-in (meta model) [:meta :db_table])))
 
@@ -435,8 +420,7 @@
 
 (defn get-field-db-column
   [model field]
-  (get-in model [field :db_column])
-  )
+  (get-in model [field :db_column]))
 
 
 (defn get-model-fields
@@ -454,6 +438,8 @@
   [model]
   (:primary-key (meta model)))
 
+
+
 (defn get-model-name
   [model]
   (:name (meta model)))
@@ -461,8 +447,7 @@
 
 (defn get-model&table-name
   [model]
-  [(get-model-name model) (get-model-db-name model)]
-  )
+  [(get-model-name model) (get-model-db-name model)])
 
 
 
@@ -494,10 +479,12 @@
         )
       to-field)))
 
+
+
 (defn get-foreignkey-field-db-column
   [model foreignkey-field field]
-  (get-in model [foreignkey-field :model field :db_column])
-  )
+  (get-in model [foreignkey-field :model field :db_column]))
+
 
 
 (defn get-foreignkey-table
@@ -516,8 +503,7 @@
           (swap! *tables assoc :count c)
           [from join-model-db-name foreignkey-field (str "T" c) null?])
         :else
-        [nil join-model-db-name foreignkey-field (get-in tables [:tables join-model-db-name foreignkey-field]) null?])))
-  )
+        [nil join-model-db-name foreignkey-field (get-in tables [:tables join-model-db-name foreignkey-field]) null?]))))
 
 
 (defn get-field-db-name
@@ -632,8 +618,7 @@
 
 (defn get-model
   [model-symbol]
-  (var-get (resolve model-symbol))
-  )
+  (var-get (resolve model-symbol)))
 
 
 
@@ -711,8 +696,7 @@
           [(str "not (" (clojure.string/join " " fields) ")") vals @*join-table]
           )
         [(clojure.string/join (str " " op " ") fields) vals @*join-table]
-        )
-      )))
+        ))))
 
 
 
@@ -806,13 +790,9 @@
     (when debug?
       (prn query-vec))
 
-    ;`(jdbc/execute! (db-connection) ~query-vec)
-    ))
+    `(jdbc/execute! (db-connection) ~query-vec)))
 
-(update! Node
-         :values {:title "aaa"}
-         :where [:id 1 :parent.title "cc"]
-         :debug? true)
+
 
 (comment
   (defmacro update-or-insert!
@@ -832,7 +812,6 @@
                                   (if (zero? (first result))
                                     (insert! model :values values :debug? debug)
                                     result))))))
-
 
 
 
