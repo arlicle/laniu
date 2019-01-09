@@ -14,6 +14,12 @@
              }}
   )
 
+
+(defmodel Publisher
+          )
+
+(insert! )
+
 (defmodel Author
           :fields {:name {:type :char-field :max-length 30}
                    :age  {:type :tiny-int-field}}

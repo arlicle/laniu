@@ -89,6 +89,17 @@
   [`int?])
 
 
+(defn- many-to-many-field-spec
+  "
+  A many-to-one relationship.
+  Requires two positional arguments: which the model is related and the on_delete option.
+  To create a recursive relationship – an object that has a many-to-one relationship with itself
+  – use {:type \"foreinkey\" :model \"self\" :on-delete  :CASCADE}
+  "
+  [{field-type :type model :model on-delete :on-delete blank? :blank?}]
+  [])
+
+
 
 (defn- char-field-spec
   "
@@ -387,6 +398,9 @@
 
                     :foreignkey
                     (foreignkey-spec field-opts)
+
+                    (:many-to-many-field :m2m-field)
+                    (many-to-many-field-spec field-opts)
 
                     :auto-field
                     (auto-field-spec field-opts)
