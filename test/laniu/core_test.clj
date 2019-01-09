@@ -22,6 +22,8 @@
 
 (insert! Author :values {:name "Chris" :age 23})
 
+(select Author :fields [:name :age])
+
 (select Author)
 
 (def AuthorBook)
@@ -32,12 +34,30 @@
 class Person(models.Model):
 friends = models.ManyToManyField("self")
 
+
+(where-parse Node '[:title [:parent.title :parent_title]])
+
 (defmodel Node
           :fields {:title {:type :char-field :max-length 60}
                    :parent {:type :foreignkey :model :self}
-                   })
+                   :nest_node {:type :foreignkey :model :self}
+                   :copy_node {:type :foreignkey :model :self}
+                   }
+          :meta [:db_table "ceshi_node"])
 
+(get-field-db-name Node :parent.title (atom []))
 
+(name :parent.title)
+
+(get-in Node [:parent :model])
+
+(get-field-db-name )
+
+(get-select-fields-query Node [:title [:parent.title :parent_title]])
+
+(select Node
+        :fields [:title [:parent.title :parent_title]]
+        :debug? true)
 (defmodel Publisher
           :fields {:name {:type :char-field :max-length 60}}
           :meta {:db_table "ceshi_publisher"})

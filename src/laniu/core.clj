@@ -319,14 +319,15 @@
   "
   [fields]
   (let [*primary_key (atom nil)
+        default {}
         new-fields (reduce (fn [r [k v]]
                              (if (:primary-key? v)
                                (reset! *primary_key k))
                              (assoc r k
                                       (case (:type v)
                                         :foreignkey
-                                        (merge {:db_column (str (name k) "_id") :to_field :id} v)
-                                        (merge {:db_column (name k)} v)
+                                        (merge default {:db_column (str (name k) "_id") :to_field :id} v)
+                                        (merge default {:db_column (name k)} v)
                                         ))
                              ) {} fields)]
     (if (not @*primary_key)
@@ -334,6 +335,15 @@
       [new-fields @*primary_key])))
 
 
+(macroexpand-1
+  '(defmodel Node
+             :fields {:title     {:type :char-field :max-length 60}
+                      :parent    {:type :foreignkey :model :self}
+                      :nest_node {:type :foreignkey :model :self}
+                      :copy_node {:type :foreignkey :model :self}
+                      :user      {:type :foreignkey :model User}
+                      }
+             :meta [:db_table "ceshi_node"]))
 
 (defmacro defmodel
   "A model is the single, definitive source of information about your data.
@@ -350,6 +360,7 @@
   (let [
         ns-name (str (ns-name *ns*))
         default_db_name (str (clojure.string/join "_" (rest (clojure.string/split ns-name #"\."))) "_" model-name)
+        [fields-configs pk] (optimi-model-fields fields-configs)
         {req-fields :req opt-fields :opt opt-fields2 :opt2}
         (reduce (fn [r [k v]]
                   (if (or (= :auto-field (:type v)) (contains? v :default) (:blank? v))
@@ -360,7 +371,7 @@
                     )
                   ) {:req [] :opt [] :opt2 {}} fields-configs)
 
-        [fields-configs pk] (optimi-model-fields fields-configs)
+
         models-fields (with-meta fields-configs {
                                                  :fields               (set (keys fields-configs))
                                                  :default-value-fields opt-fields2
@@ -409,8 +420,16 @@
 
 
 (defn- get-model-db-name
-  [model]
-  (get-in (meta model) [:meta :db_table]))
+  ([model1 model2]
+   (if (= model1 :self)
+     (get-model-db-name model2)
+     (if (keyword? model1)
+       (throw (Exception. (model1 " is not valid model. do you want use :self ?")))
+       (get-model-db-name model1))
+     )
+    )
+  ([model]
+   (get-in (meta model) [:meta :db_table])))
 
 
 
@@ -467,43 +486,69 @@
 
 (defn get-foreignkey-to-field-db-column
   [model foreignkey-field]
-  (get-in model [foreignkey-field :type])
   (let [to-field (get-in model [foreignkey-field :to_field])]
     (if (keyword? to-field)
-      (get-in model [foreignkey-field :model to-field :db_column])
-      to-field
-      )
-    )
+      (if (= :self (get-in model [foreignkey-field :model]))
+        (get-in model [to-field :db_column])
+        (get-in model [foreignkey-field :model to-field :db_column])
+        )
+      to-field)))
+
+(defn get-foreignkey-field-db-column
+  [model foreignkey-field field]
+  (get-in model [foreignkey-field :model field :db_column])
+  )
+
+
+(defn get-foreignkey-table
+  [model *tables from foreignkey-field join-model-db-name]
+  (if *tables
+    (let [tables @*tables a (get-in tables [:tables join-model-db-name]) c (inc (:count tables)) null? (get-in model [foreignkey-field :null?])]
+      (cond
+        (nil? a)
+        (do
+          (swap! *tables update-in [:tables join-model-db-name] assoc foreignkey-field nil)
+          (swap! *tables assoc :count c)
+          [from join-model-db-name foreignkey-field nil null?])
+        (not (contains? a foreignkey-field))
+        (do
+          (swap! *tables update-in [:tables join-model-db-name] assoc foreignkey-field (str "T" c))
+          (swap! *tables assoc :count c)
+          [from join-model-db-name foreignkey-field (str "T" c) null?])
+        :else
+        [nil join-model-db-name foreignkey-field (get-in tables [:tables join-model-db-name foreignkey-field]) null?])))
   )
 
 
 (defn get-field-db-name
-  [model k *join-table]
+  [model k & {:keys [*join-table *tables from]}]
   (let [k_name (name k) model-db-table (get-model-db-name model)]
     (if-let [[_ foreingnkey-field-name link-table-field] (re-find #"(\w+)\.(\w+)" k_name)]
-      ; 获取其它表的表明，替换第一个部分
       (let [foreignkey-field (keyword foreingnkey-field-name)
             _ (check-model-field model foreignkey-field)
-            join-model-db-name (get-model-db-name (get-in model [foreignkey-field :model]))]
+            join-model-db-name (get-model-db-name (get-in model [foreignkey-field :model]) model)
+            join-table (get-foreignkey-table model *tables from foreignkey-field join-model-db-name)
+
+            ; 处理数据库别名问题
+            join-model-db-name (if-let [table-alias (get join-table 3)] table-alias (get join-table 1))]
         (if *join-table
-          (swap! *join-table conj [join-model-db-name
+          (swap! *join-table conj [join-table
                                    (str model-db-table "."
                                         (get-field-db-column model foreignkey-field)
                                         " = " join-model-db-name "."
                                         (get-foreignkey-to-field-db-column model foreignkey-field)
                                         )]))
-        (str join-model-db-name "." link-table-field)
-        )
+        (str join-model-db-name "." (get-foreignkey-field-db-column model foreignkey-field (keyword link-table-field))))
       (do
         (check-model-field model k)
-        (str model-db-table "." (get-field-db-column model k)))
-      )))
+        (str model-db-table "." (get-field-db-column model k))))))
+
 
 
 (defn clean-insert-model-data
   [model data]
   (reduce (fn [r [k v]]
-            (assoc r (get-field-db-name model k nil)
+            (assoc r (get-field-db-name model k)
                      (if (fn? v) (v) v)))
           {}
           (select-keys (merge (get-model-default-fields model) data)
@@ -512,9 +557,17 @@
 
 
 (defn get-join-table-query
-  [join-table join-type]
-  (map (fn [[t s]] (str join-type " JOIN " t " ON (" s ")"))
-       join-table))
+  [join-table]
+  (reduce (fn [r [[from table _ alias null?] s]]
+            (if from
+              (let [join-type (case from :fields (if null? "LEFT" "INNER") :where "INNER")
+                    table (if alias (str table " " alias) table)]
+                (conj r (str join-type " JOIN " table " ON (" s ")")))
+              r
+              )
+            )
+          []
+          join-table))
 
 
 
@@ -528,7 +581,7 @@
                          (list? x)
                          (infix model x *vals)
                          (keyword? x)
-                         (get-field-db-name model x nil)
+                         (get-field-db-name model x)
                          (symbol? x)
                          (do
                            (swap! *vals conj x)
@@ -560,12 +613,12 @@
                   (if (list? v)
                     (let [[k2 v2] (infix model v)]
                       (-> r
-                          (update-in [0] conj (str (get-field-db-name model k nil) "=" k2))
+                          (update-in [0] conj (str (get-field-db-name model k) "=" k2))
                           (update-in [1] into v2)
                           )
                       )
                     (-> r
-                        (update-in [0] conj (str (get-field-db-name model k nil) "=?"))
+                        (update-in [0] conj (str (get-field-db-name model k) "=?"))
                         (update-in [1] conj v)
                         )
                     )
@@ -602,7 +655,7 @@
     <= [" <= ?" v]
     not= [" <> ?" v]
     rawsql [(str " " v) args]
-    (startswith :startswith) [" like ?" (str v "%")]
+    startswith [" like ?" (str v "%")]
     nil? [(if v
             " IS NULL "
             " IS NOT NULL "
@@ -612,8 +665,8 @@
 
 
 
-(defn where-parse
-  [model where-condition]
+(defn get-where-query
+  [model where-condition *tables]
   (let [[op where-condition] (if (list? where-condition)
                                [(first where-condition) (rest where-condition)]
                                ['and where-condition])
@@ -624,7 +677,7 @@
           (reduce (fn [r [k v]]
                     (let [[s-type new-val]                  ;查询类型
                           (if (or (vector? v) (list? v))
-                            ; 如果是vector进行单独的处理
+                            ; 如果是vector或list进行单独的处理
                             (parse-sql-func v)
 
                             ; 否则就是普通的值, 直接等于即可
@@ -634,13 +687,14 @@
                                       #(apply conj %1 %2)
                                       conj)]
                       (-> r
-                          (update-in [0] conj (str (get-field-db-name model k *join-table) s-type))
+                          (update-in [0] conj (str (get-field-db-name model k :*join-table *join-table :*tables *tables :from :where) s-type
+                                                   ))
                           (update-in [1] conj-func new-val))))
                   [[] []]
                   (partition 2 where-condition)
                   )
           (reduce (fn [r where-condition2]
-                    (let [[fields-str2 vals2 join-table] (where-parse model where-condition2)]
+                    (let [[fields-str2 vals2 join-table] (get-where-query model where-condition2 *tables)]
                       (swap! *join-table into join-table)
                       (-> r
                           (update-in [0] conj (str "(" fields-str2 ")"))
@@ -650,30 +704,35 @@
                   where-condition))]
     (if (seq fields)
       (if (= 'not op)
-        (if (> (count fields) 1)
-          (throw (Exception. (str "not operation only can contains one collection. (not [:id 1 :headline \"xxx\"]) "
-                                  fields " has " (count fields) " .")))
-          [(str "not " (clojure.string/join " " fields)) vals @*join-table])
-        [(clojure.string/join (str " " op " ") fields) vals @*join-table]))))
+        (do
+          (if (> (count fields) 1)
+            (throw (Exception. (str "not operation only can contains one collection. (not [:id 1 :headline \"xxx\"]) "
+                                    fields " has " (count fields) " ."))))
+          [(str "not (" (clojure.string/join " " fields) ")") vals @*join-table]
+          )
+        [(clojure.string/join (str " " op " ") fields) vals @*join-table]
+        )
+      )))
 
 
 
 (defn get-select-fields-query
-  [model fields]
+  [model fields *tables]
   (if (seq fields)
     (let [*join-table (atom [])]
-      [(clojure.string/join ", "
-                            (map (fn [k]
-                                   (if (= (type k) clojure.lang.Keyword)
-                                     ; 一种是字段直接就是关键字，表示字段名
-                                     (get-field-db-name model k *join-table)
-                                     ; 一种字段是有中括号，表示有别名
-                                     (let [[k0 k1] k]
-                                       (str (get-field-db-name model k0 *join-table) " as " (name k1))
-                                       )))
-                                 fields))
+      [
+       (mapv (fn [k]
+               (if (= (type k) clojure.lang.Keyword)
+                 ; 一种是字段直接就是关键字，表示字段名
+                 (get-field-db-name model k :*join-table *join-table :*tables *tables :from :fields)
+                 ; 一种字段是有中括号，表示有别名
+                 (let [[k0 k1] k]
+                   (str (get-field-db-name model k0 :*join-table *join-table :*tables *tables :from :fields) " as " (name k1))
+                   )))
+             fields)
        @*join-table])
     ["*" nil]))
+
 
 
 
@@ -681,7 +740,7 @@
   [model fields]
   (map (fn a-func [[op k] & x]
          (let [[k2 as-k] (if (keyword? k)
-                           [(get-field-db-name model k nil) (str " as " op "__" (name k))]
+                           [(get-field-db-name model k) (str " as " op "__" (name k))]
                            (a-func k true))]
            (if (nil? x)
              (str op "(" k2 ")" as-k)
@@ -720,10 +779,8 @@
                                      )
                                    ) values)
                     values)]
-
     (when debug?
       (prn "db:" (keyword db-table-name) " items:" new-items))
-
     (jdbc/insert-multi! (db-connection) (keyword db-table-name) new-items)))
 
 
@@ -731,14 +788,16 @@
 (defmacro update!
   [model & {values :values where-condition :where debug? :debug? clean-data? :clean-data? :or {debug? false clean-data? true}}]
   (let [model (get-model model)
+        model-db-name (get-model-db-name model)
+        *tables (atom {:tables {model-db-name {}} :count 1})
         [fields-str fields-values] (get-update!-fields-query model values)
-        [where-query-str values where-join-table] (where-parse model where-condition)
+        [where-query-str values where-join-table] (get-where-query model where-condition *tables)
         where-query-str (if where-query-str (str "where " where-query-str))
 
-        where-join-query-str (clojure.string/join " " (get-join-table-query (set where-join-table) "INNER"))
+        where-join-query-str (clojure.string/join " " (get-join-table-query where-join-table))
 
         fields-str (if fields-str (str " set " fields-str))
-        sql (str "update " (get-model-db-name model) " "
+        sql (str "update " model-db-name " "
                  where-join-query-str " "
                  fields-str " " where-query-str)
         query-vec (-> [sql]
@@ -747,10 +806,13 @@
     (when debug?
       (prn query-vec))
 
-    `(jdbc/execute! (db-connection) ~query-vec)
+    ;`(jdbc/execute! (db-connection) ~query-vec)
     ))
 
-
+(update! Node
+         :values {:title "aaa"}
+         :where [:id 1 :parent.title "cc"]
+         :debug? true)
 
 (comment
   (defmacro update-or-insert!
@@ -772,25 +834,26 @@
                                     result))))))
 
 
+
+
 (defmacro select
   [model & {fields-list :fields where-condition :where debug? :debug?}]
   (let [model (get-model model)
-        [where-query-str values where-join-table] (where-parse model where-condition)
-        where-query-str (if where-query-str (str "where " where-query-str))
-        [fields-str field-join-table] (get-select-fields-query model fields-list)
-
-        set-where-join-table (set where-join-table)
-        diff-join-table (clojure.set/difference (set field-join-table) set-where-join-table)
-        fields-join-query-strs (get-join-table-query diff-join-table "LEFT")
-        where-join-query-strs (get-join-table-query set-where-join-table "INNER")
-        sql (str "select " fields-str " from " (get-model-db-name model)
+        model-db-name (get-model-db-name model)
+        *tables (atom {:tables {model-db-name {}} :count 1})
+        [where-query-str values where-join-table] (get-where-query model where-condition *tables)
+        [fields-str field-join-table] (get-select-fields-query model fields-list *tables)
+        fields-join-query-strs (get-join-table-query field-join-table)
+        where-join-query-strs (get-join-table-query where-join-table)
+        sql (str "select " (clojure.string/join ", " fields-str) " from " model-db-name
                  (when (seq fields-join-query-strs)
                    (str " " (clojure.string/join " " fields-join-query-strs)))
                  (when (seq where-join-query-strs)
                    (str " " (clojure.string/join " " where-join-query-strs)))
                  (when (and where-query-str (not= "" where-query-str))
                    (str " " where-query-str)))
-        query-vec (into [sql] (filter #(not (nil? %)) values))]
+        query-vec (into [sql] (filter #(not (nil? %)) values))
+        ]
     (when debug?
       (prn query-vec))
     `(jdbc/query (db-connection) ~query-vec)))
@@ -800,10 +863,12 @@
 (defmacro delete!
   [model & {where-condition :where debug? :debug?}]
   (let [model (get-model model)
-        [where-query-str values where-join-table] (where-parse model where-condition)
+        model-db-name (get-model-db-name model)
+        *tables (atom {:tables {model-db-name {}} :count 1})
+        [where-query-str values where-join-table] (get-where-query model where-condition *tables)
         where-query-str (if where-query-str (str "WHERE " where-query-str))
-        where-join-query-strs (get-join-table-query (set where-join-table) "INNER")
-        sql (str "DELETE " (get-model-db-name model) " FROM " (get-model-db-name model) " "
+        where-join-query-strs (get-join-table-query where-join-table)
+        sql (str "DELETE " model-db-name " FROM " (get-model-db-name model) " "
                  (clojure.string/join " " where-join-query-strs) " "
                  where-query-str)
         query-vec (into [sql] values)]
@@ -817,11 +882,13 @@
   "Returns the aggregate values (averages, sums, count etc.) "
   [model & {fields-list :fields where-condition :where debug? :debug?}]
   (let [model (get-model model)
+        model-db-name (get-model-db-name model)
+        *tables (atom {:tables {model-db-name {}} :count 1})
         fields-query-strs (get-aggregate-fields-query model fields-list)
-        [where-query-str values where-join-table] (where-parse model where-condition)
+        [where-query-str values where-join-table] (get-where-query model where-condition *tables)
         where-query-str (if where-query-str (str "where " where-query-str))
-        where-join-query-strs (get-join-table-query (set where-join-table) "INNER")
-        sql (str "select " (clojure.string/join ", " fields-query-strs) " from " (get-model-db-name model) " "
+        where-join-query-strs (get-join-table-query where-join-table)
+        sql (str "select " (clojure.string/join ", " fields-query-strs) " from " model-db-name " "
                  (clojure.string/join " " where-join-query-strs) " "
                  where-query-str)
         query-vec (into [sql] values)]
