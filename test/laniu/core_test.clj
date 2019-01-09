@@ -28,12 +28,21 @@
 
 
 
+(defmodel tree
+          :fields {:name       {:type :char-field :max-length 30}
+                   :parent     {:type :foreignkey :model :self}
+                   :sort-order {:type :int-field :default 0}
+                   })
+
 
 
 (defmodel Author
-          :fields {:name {:type :char-field :max-length 30}
-                   :age  {:type :tiny-int-field}}
+          :fields {:name   {:type :char-field :max-length 30}
+                   :parent {:type :foreignkey :model Author}
+                   :age    {:type :tiny-int-field}}
           :meta {:db_table "ceshi_author"})
+
+Author
 
 
 ;(insert-multi! Author :values [{:name "Lushenggan" :age 23}
@@ -97,13 +106,13 @@
 (meta Book)
 (macroexpand-1
   '(defmodel Book
-            :fields {:name    {:type :char-field :max-length 60}
-                     :pages   {:type :int-field}
-                     :price   {:type :float-field :default 0}
-                     :rating  {:type :tiny-int-field :choices [[-1 "未评分"] [0 "0分"] [1 "1分"] [2 "2分"] [3 "3分"] [4 "4分"] [5 "5分"]]}
-                     :authors {:type :many-to-many-field :model Publisher}
-                     :pubdate {:type :int-field}}
-            :meta {:db_table "ceshi_book"}))
+             :fields {:name    {:type :char-field :max-length 60}
+                      :pages   {:type :int-field}
+                      :price   {:type :float-field :default 0}
+                      :rating  {:type :tiny-int-field :choices [[-1 "未评分"] [0 "0分"] [1 "1分"] [2 "2分"] [3 "3分"] [4 "4分"] [5 "5分"]]}
+                      :authors {:type :many-to-many-field :model Publisher}
+                      :pubdate {:type :int-field}}
+             :meta {:db_table "ceshi_book"}))
 
 
 (def a '({:generated_key 50}))
@@ -131,13 +140,13 @@
 
 (insert! Publisher :values {:name "aaa"})
 (defmodel Book
-          :fields {:name    {:type :char-field :max-length 60}
-                   :pages   {:type :int-field}
-                   :price   {:type :float-field :default 0}
-                   :rating  {:type :tiny-int-field :choices [[-1 "未评分"] [0 "0分"] [1 "1分"] [2 "2分"] [3 "3分"] [4 "4分"] [5 "5分"]]}
-                   :authors {:type :many-to-many-field :model Publisher}
+          :fields {:name      {:type :char-field :max-length 60}
+                   :pages     {:type :int-field}
+                   :price     {:type :float-field :default 0}
+                   :rating    {:type :tiny-int-field :choices [[-1 "未评分"] [0 "0分"] [1 "1分"] [2 "2分"] [3 "3分"] [4 "4分"] [5 "5分"]]}
+                   :authors   {:type :many-to-many-field :model Publisher}
                    :publisher {:type :foreignkey :model Publisher}
-                   :pubdate {:type :int-field}}
+                   :pubdate   {:type :int-field}}
           :meta {:db_table "ceshi_book"})
 
 

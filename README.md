@@ -82,6 +82,12 @@ This setting maps database aliases, which are a way to refer to a specific datab
                    :created    {:type :int-field :default #(quot (System/currentTimeMillis) 1000)}}
           :meta {:db_table "ceshi_article"})
 
+; foreignkey to self
+(defmodel tree
+          :fields {:name       {:type :char-field :max-length 30}
+                   :parent     {:type :foreignkey :model :self}
+                   :sort-order {:type :int-field :default 0}
+                   })
 ```
 
 when you define a model , It's automatic create the data spec.
