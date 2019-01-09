@@ -543,20 +543,24 @@
   (let [k_name (name k) model-db-table (get-model-db-name model)]
     (if-let [[_ foreingnkey-field-name link-table-field] (re-find #"(\w+)\.(\w+)" k_name)]
       (let [foreignkey-field (keyword foreingnkey-field-name)
+            link-table-field (keyword link-table-field)
             _ (check-model-field model foreignkey-field)
             join-model-db-name (get-model-db-name (get-in model [foreignkey-field :model]) model)
             join-table (get-foreignkey-table model *tables from foreignkey-field join-model-db-name)
 
             ; 处理数据库别名问题
             join-model-db-name (if-let [table-alias (get join-table 3)] table-alias (get join-table 1))]
-        (if *join-table
-          (swap! *join-table conj [join-table
-                                   (str model-db-table "."
-                                        (get-field-db-column model foreignkey-field)
-                                        " = " join-model-db-name "."
-                                        (get-foreignkey-to-field-db-column model foreignkey-field)
-                                        )]))
-        (str join-model-db-name "." (get-foreignkey-field-db-column model foreignkey-field (keyword link-table-field))))
+        (if (= :id link-table-field)
+          (str model-db-table "." (get-field-db-column model foreignkey-field))
+          (do
+            (if *join-table
+              (swap! *join-table conj [join-table
+                                       (str model-db-table "."
+                                            (get-field-db-column model foreignkey-field)
+                                            " = " join-model-db-name "."
+                                            (get-foreignkey-to-field-db-column model foreignkey-field)
+                                            )]))
+            (str join-model-db-name "." (get-foreignkey-field-db-column model foreignkey-field link-table-field)))))
       (do
         (check-model-field model k)
         (str model-db-table "." (get-field-db-column model k))))))
@@ -573,7 +577,6 @@
           [{} {}]
           (select-keys (merge (get-model-default-fields model) data)
                        (get-model-fields model))))
-
 
 
 
@@ -869,7 +872,7 @@
                  (when (seq where-join-query-strs)
                    (str " " (clojure.string/join " " where-join-query-strs)))
                  (when (and where-query-str (not= "" where-query-str))
-                   (str " " where-query-str)))
+                   (str " where " where-query-str)))
         query-vec (into [sql] (filter #(not (nil? %)) values))
         ]
     (when debug?

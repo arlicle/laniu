@@ -15,7 +15,7 @@
   )
 
 
-
+(use 'laniu.core-test :reload)
 
 ;(insert-multi! Publisher :values [{:name "Yunda"}
 ;                                  {:name "Kungong"}
@@ -53,9 +53,13 @@
           :meta [:db_table "ceshi_node"])
 
 
-(select Node :fields [:title :parent.title]
+(select Node :fields [:title :parent.id]
+        :where [:id 1 :parent.id 3]
         :debug? true
         )
+
+["select ceshi_node.title, ceshi_node.parent_id from ceshi_node ceshi_node.id= ? and ceshi_node.parent_id= ?" 1 3]
+
 
 ;(get-field-db-name Node :parent.title)
 
@@ -83,6 +87,8 @@
 
 
 
+
+(select Book :fields [:name :authors.name])
 (defmodel tree-data)
 
 
