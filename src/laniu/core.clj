@@ -342,6 +342,14 @@
 
 
 
+(defn create-model-db-name
+  [model-name ns-name]
+  (clojure.string/lower-case (str (clojure.string/replace (clojure.string/join "_" (rest (clojure.string/split ns-name #"\."))) #"\-" "_") "_" model-name))
+  )
+
+
+
+
 (defmacro defmodel
   "A model is the single, definitive source of information about your data.
   It contains the essential fields and behaviors of the data you’re storing.
@@ -356,7 +364,6 @@
   [model-name & {fields-configs :fields meta-configs :meta methods-config :methods :or {meta-configs {} methods-config {}}}]
   (let [
         ns-name (str (ns-name *ns*))
-        default_db_name (str (clojure.string/join "_" (rest (clojure.string/split ns-name #"\."))) "_" model-name)
         [fields-configs pk] (optimi-model-fields fields-configs)
         {req-fields :req opt-fields :opt opt-fields2 :opt2}
         (reduce (fn [r [k v]]
@@ -376,7 +383,7 @@
                                   :name                 (name model-name)
                                   :ns-name              ns-name
                                   :primary-key          pk
-                                  :meta                 (merge {:db_table default_db_name} meta-configs)})]
+                                  :meta                 (merge {:db_table (create-model-db-name model-name ns-name)} meta-configs)})]
 
     `(do
        ~@(for [[k field-opts] fields-configs]
@@ -404,6 +411,9 @@
 
                     :auto-field
                     (auto-field-spec field-opts)
+
+                    :date-field
+                    (date-field-spec field-opts)
 
                     (do
                       (println "(:type field-opts):" (:type field-opts))
@@ -483,21 +493,20 @@
 
 
 
+(defn get-foreignkey-field-db-column
+  [model foreignkey-field field]
+  (if (= :self (get-in model [foreignkey-field :model]))
+    (get-in model [field :db_column])
+    (get-in model [foreignkey-field :model field :db_column])
+    ))
+
+
 (defn get-foreignkey-to-field-db-column
   [model foreignkey-field]
   (let [to-field (get-in model [foreignkey-field :to_field])]
     (if (keyword? to-field)
-      (if (= :self (get-in model [foreignkey-field :model]))
-        (get-in model [to-field :db_column])
-        (get-in model [foreignkey-field :model to-field :db_column])
-        )
+      (get-foreignkey-field-db-column model foreignkey-field to-field)
       to-field)))
-
-
-
-(defn get-foreignkey-field-db-column
-  [model foreignkey-field field]
-  (get-in model [foreignkey-field :model field :db_column]))
 
 
 
@@ -518,6 +527,7 @@
           [from join-model-db-name foreignkey-field (str "T" c) null?])
         :else
         [nil join-model-db-name foreignkey-field (get-in tables [:tables join-model-db-name foreignkey-field]) null?]))))
+
 
 
 (defn get-field-db-name

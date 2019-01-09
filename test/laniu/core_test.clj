@@ -15,10 +15,20 @@
   )
 
 
-(defmodel Publisher
-          )
 
-(insert! )
+
+;(insert-multi! Publisher :values [{:name "Yunda"}
+;                                  {:name "Kungong"}
+;                                  {:name "Caida"}
+;                                  {:name "Renmin"}
+;                                  {:name "Beijing"}
+;                                  ]
+;               :debug? true)
+
+
+
+
+
 
 (defmodel Author
           :fields {:name {:type :char-field :max-length 30}
@@ -26,44 +36,35 @@
           :meta {:db_table "ceshi_author"})
 
 
-(insert! Author :values {:name "Chris" :age 23})
+;(insert-multi! Author :values [{:name "Lushenggan" :age 23}
+;                               {:name "Lixiaolong" :age 28}
+;                               {:name "Xudanyan" :age 30}
+;                               {:name "Luogang" :age 34}
+;                               {:name "SunYanhuan" :age 34}
+;                               ])
 
-(select Author :fields [:name :age])
-
-(select Author)
-
-(def AuthorBook)
-
-(def xf (comp (filter odd?) (map inc)))
-(transduce xf + (range 5))
-
-class Person(models.Model):
-friends = models.ManyToManyField("self")
-
-
-(where-parse Node '[:title [:parent.title :parent_title]])
 
 (defmodel Node
-          :fields {:title {:type :char-field :max-length 60}
-                   :parent {:type :foreignkey :model :self}
+          :fields {:title     {:type :char-field :max-length 60}
+                   :parent    {:type :foreignkey :model :self}
                    :nest_node {:type :foreignkey :model :self}
                    :copy_node {:type :foreignkey :model :self}
                    }
           :meta [:db_table "ceshi_node"])
 
-(get-field-db-name Node :parent.title (atom []))
 
-(name :parent.title)
+(select Node :fields [:title :parent.title]
+        :debug? true
+        )
 
-(get-in Node [:parent :model])
+;(get-field-db-name Node :parent.title)
 
-(get-field-db-name )
-
-(get-select-fields-query Node [:title [:parent.title :parent_title]])
-
+Node
 (select Node
         :fields [:title [:parent.title :parent_title]]
         :debug? true)
+
+
 (defmodel Publisher
           :fields {:name {:type :char-field :max-length 60}}
           :meta {:db_table "ceshi_publisher"})
@@ -84,5 +85,6 @@ friends = models.ManyToManyField("self")
                    :books {:type :many-to-many-field :model Book}}
           :meta {:db_table "ceshi_store"})
 
-
+(insert! Book :values {:name "Living Clojure" :pages 250 :price 23 :rating 10 :pub_data "2015-11-11"})
+(select Book)
 
