@@ -892,7 +892,7 @@
         query-vec (into [sql] values)]
     (when debug?
       (prn query-vec))
-    `(jdbc/execute! (db-connection) ~query-vec)))
+    `(first (jdbc/execute! (db-connection) ~query-vec))))
 
 
 
