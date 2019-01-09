@@ -59,16 +59,14 @@
 
 ;(get-field-db-name Node :parent.title)
 
-Node
 (select Node
         :fields [:title [:parent.title :parent_title]]
         :debug? true)
-
+(meta Node)
 
 (defmodel Publisher
           :fields {:name {:type :char-field :max-length 60}}
           :meta {:db_table "ceshi_publisher"})
-
 
 (defmodel Book
           :fields {:name    {:type :char-field :max-length 60}
@@ -76,8 +74,19 @@ Node
                    :price   {:type :float-field :default 0}
                    :rating  {:type :tiny-int-field :choices [[-1 "未评分"] [0 "0分"] [1 "1分"] [2 "2分"] [3 "3分"] [4 "4分"] [5 "5分"]]}
                    :authors {:type :many-to-many-field :model Publisher}
-                   :pubdate {:type :date-field}}
+                   :pubdate {:type :int-field}}
           :meta {:db_table "ceshi_book"})
+
+(meta Book)
+(macroexpand-1
+  '(defmodel Book
+            :fields {:name    {:type :char-field :max-length 60}
+                     :pages   {:type :int-field}
+                     :price   {:type :float-field :default 0}
+                     :rating  {:type :tiny-int-field :choices [[-1 "未评分"] [0 "0分"] [1 "1分"] [2 "2分"] [3 "3分"] [4 "4分"] [5 "5分"]]}
+                     :authors {:type :many-to-many-field :model Publisher}
+                     :pubdate {:type :int-field}}
+            :meta {:db_table "ceshi_book"}))
 
 
 (defmodel Store
@@ -85,6 +94,31 @@ Node
                    :books {:type :many-to-many-field :model Book}}
           :meta {:db_table "ceshi_store"})
 
-(insert! Book :values {:name "Living Clojure" :pages 250 :price 23 :rating 10 :pub_data "2015-11-11"})
+(insert! Book
+         :values {:name "Living Clojure" :pages 250 :price 23 :rating 5 :pubdate 2005}
+         :debug? true
+         )
 (select Book)
 
+(select Publisher)
+
+(defmodel Publisher
+          :fields {:name {:type :char-field :max-length 60}}
+          :meta {:db_table "ceshi_publisher"})
+
+(insert! Publisher :values {:name "aaa"})
+(defmodel Book
+          :fields {:name    {:type :char-field :max-length 60}
+                   :pages   {:type :int-field}
+                   :price   {:type :float-field :default 0}
+                   :rating  {:type :tiny-int-field :choices [[-1 "未评分"] [0 "0分"] [1 "1分"] [2 "2分"] [3 "3分"] [4 "4分"] [5 "5分"]]}
+                   :authors {:type :many-to-many-field :model Publisher}
+                   :publisher {:type :foreignkey :model Publisher}
+                   :pubdate {:type :int-field}}
+          :meta {:db_table "ceshi_book"})
+
+
+(insert! Book
+         :values {:name "Living Clojure" :pages 250 :price 23 :rating 5 :pubdate 2005 :publisher 1}
+         :debug? true
+         )

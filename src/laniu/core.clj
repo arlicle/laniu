@@ -292,10 +292,11 @@
         choices-spec (if-let [choices (:choices opts)]
                        (let [choices-map (into {} choices)]
                          `#(contains? ~choices-map %)))
+        type-spec `#(or (int? %) (float? %))
         ]
 
 
-    (filterv identity [`float? max-value-spec min-value-spec choices-spec])
+    (filterv identity [type-spec max-value-spec min-value-spec choices-spec])
     ))
 
 
@@ -365,20 +366,22 @@
   (let [
         ns-name (str (ns-name *ns*))
         [fields-configs pk] (optimi-model-fields fields-configs)
-        {req-fields :req opt-fields :opt opt-fields2 :opt2}
+        {req-fields :req opt-fields :opt opt-fields2 :opt2 un-insert-fields :ui}
         (reduce (fn [r [k v]]
-                  (if (or (= :auto-field (:type v)) (contains? v :default) (:blank? v))
-                    (-> r
+                  (if (or (contains? #{:auto-field :many-to-many-field} (:type v)) (contains? v :default) (:blank? v))
+                    (-> (if (= :many-to-many-field (:type v))
+                          (update-in r [:ui] conj k) r)
                         (update-in [:opt] conj (keyword (str ns-name "." (name model-name)) (name k)))
                         (update-in [:opt2] assoc k (:default v)))
                     (update-in r [:req] conj (keyword (str ns-name "." (name model-name)) (name k)))
                     )
-                  ) {:req [] :opt [] :opt2 {}} fields-configs)
+                  ) {:req [] :opt [] :opt2 {} :ui #{}} fields-configs)
 
 
         models-fields (with-meta fields-configs
                                  {
                                   :fields               (set (keys fields-configs))
+                                  :un-insert-fields     un-insert-fields
                                   :default-value-fields opt-fields2
                                   :name                 (name model-name)
                                   :ns-name              ns-name
@@ -396,6 +399,9 @@
 
                     :int-field
                     (int-field-spec field-opts)
+
+                    :float-field
+                    (float-field-spec field-opts)
 
                     :tiny-int-field
                     (tiny-int-field-spec field-opts)
@@ -558,11 +564,14 @@
 (defn clean-insert-model-data
   [model data]
   (reduce (fn [r [k v]]
-            (assoc r (get-field-db-name model k)
-                     (if (fn? v) (v) v)))
-          {}
+            (println k)
+            (if (= :many-to-many-field (get-in model [k :type]))
+              (assoc-in r [1 k] (if (fn? v) (v) v))
+              (assoc-in r [0 (get-field-db-name model k)] (if (fn? v) (v) v))))
+          [{} {}]
           (select-keys (merge (get-model-default-fields model) data)
                        (get-model-fields model))))
+
 
 
 
@@ -762,14 +771,17 @@
   [model & {:keys [values debug? clean-data?] :or {debug? false clean-data? true}}]
   (let [[model-name db-table-name] (get-model&table-name model)]
     (if ($s/valid? (keyword (str (ns-name *ns*)) model-name) values)
-      (let [new-data
+      (let [[insert-data mdata]
             (if clean-data?
               (clean-insert-model-data model values)
               values
-              )]
+              )
+            ]
+        (println "insert-data" insert-data)
+        (println "mdata" mdata)
         (when debug?
-          (prn "insert data to db " (keyword db-table-name) " : " new-data))
-        (jdbc/insert! (db-connection) (keyword db-table-name) new-data))
+          (prn "insert data to db " (keyword db-table-name) " : " insert-data))
+        (jdbc/insert! (db-connection) (keyword db-table-name) insert-data))
       ($s/explain-data (keyword (str (ns-name *ns*)) model-name) values))))
 
 
