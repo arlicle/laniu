@@ -165,7 +165,6 @@ Author
 
 (create-model-db-name "model-name" "ns-name.fdfa-fdsaf")
 
-(meta Book)
 (macroexpand-1
   '(defmodel Book
              :fields {:name    {:type :char-field :max-length 60}
@@ -185,17 +184,6 @@ Author
 
 
 
-(insert! Book
-         :values {:name "Living Clojure" :pages 250 :price 23 :rating 5 :pubdate 2005 :publisher 2}
-         :debug? true
-         )
-
-
-(select Book)
-
-(update! Book :values {:name "JVM Performance"} :where [:id 3])
-
-(select Publisher)
 
 (defmodel Publisher
           :fields {:name {:type :char-field :max-length 60}}

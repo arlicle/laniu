@@ -541,6 +541,14 @@ Returns the aggregate values (avg, sum, count, min, max), the aggregate field wi
 ["select count(*) as count from ceshi_book INNER JOIN ceshi_publisher ON (ceshi_book.publisher_id = ceshi_publisher.id) where ceshi_publisher.name= ?" "BaloneyPress"]
 
 ; Average price across all books.
+
+(select Book
+        :aggregate [(avg :price)]
+        :debug? true
+        )
+["select avg(ceshi_book.price) as avg__price from ceshi_book"]
+
+
 ```
 
 ### run raw sql
