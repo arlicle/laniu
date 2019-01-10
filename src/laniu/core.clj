@@ -599,6 +599,9 @@
 
 
 (defn infix
+  "trans (+ 1 2) to (1 + 2)
+  or (* 4 (+ 3 2)) to \"(4*(3+2))\"
+  "
   ([model form]
    (let [*vals (atom [])]
      [(infix model form *vals) @*vals]))
@@ -658,9 +661,11 @@
 
 
 (defn get-model
+  "get model by symbol, if not find, throw error."
   [model-symbol]
-  (var-get (resolve model-symbol)))
-
+  (if-let [v (resolve model-symbol)]
+    (var-get v)
+    (throw (Exception. (str "Not find model " model-symbol)))))
 
 
 (defn check-where-func
@@ -705,7 +710,6 @@
                           (if (or (vector? v) (list? v))
                             ; 如果是vector或list进行单独的处理
                             (parse-sql-func v)
-
                             ; 否则就是普通的值, 直接等于即可
                             ["= ?" v]
                             )
@@ -760,16 +764,24 @@
 
 
 
-
 (defn get-aggregate-fields-query
   [model fields]
-  (map (fn a-func [[op k] & x]
-         (let [[k2 as-k] (if (keyword? k)
-                           [(get-field-db-name model k) (str " as " op "__" (name k))]
-                           (a-func k true))]
-           (if (nil? x)
-             (str op "(" k2 ")" as-k)
-             [(str op "(" k2 ")") as-k])))
+  (map (fn a-func [item & x]
+         (if (string? item)
+           ; support raw sql count
+           item
+           (let [[as-k op k] (if (vector? item)
+                               ; 如果需要用到别名
+                               (cons (str " as " (name (last item))) (first item))
+                               (cons (str " as " (first item) "__" (name (second item))) item)
+                               )
+
+                 k2 (if (keyword? k)
+                      (get-field-db-name model k)
+                      (a-func k true))]
+             (if (nil? x)
+               (str op "(" k2 ")" as-k)
+               (str op "(" k2 ")")))))
        fields))
 
 
@@ -837,37 +849,19 @@
 
 
 
-(comment
-  (defmacro update-or-insert!
-    "to be continue"
-    [model & {values :values where-condition :where debug? :debug? clean-data? :clean-data? :or {debug? false clean-data? true}}]
-    (let [t-con (db-connection)
-          pk-key (get-model-primary-key model)
-          pk (pk-key values)
-          where-condition (if (empty? where-condition)
-                            (if (not pk)
-                              (throw (Exception. "values must have pk or where condition can't empty"))
-                              [pk-key pk])
-                            where-condition)]
-
-      (jdbc/with-db-transaction [t-con db-spec]
-                                (let [result (update! model :values values :where where-condition :debug? debug)]
-                                  (if (zero? (first result))
-                                    (insert! model :values values :debug? debug)
-                                    result))))))
-
-
-
 (defmacro select
-  [model & {fields-list :fields where-condition :where debug? :debug?}]
+  [model & {fields-list :fields aggregate-fields :aggregate where-condition :where debug? :debug?}]
   (let [model (get-model model)
+        _ (println "model:" model)
         model-db-name (get-model-db-name model)
         *tables (atom {:tables {model-db-name {}} :count 1})
         [where-query-str values where-join-table] (get-where-query model where-condition *tables)
-        [fields-str field-join-table] (get-select-fields-query model fields-list *tables)
+        [fields-strs field-join-table] (if aggregate-fields
+                                         [(get-aggregate-fields-query model aggregate-fields)]
+                                         (get-select-fields-query model fields-list *tables))
         fields-join-query-strs (get-join-table-query field-join-table)
         where-join-query-strs (get-join-table-query where-join-table)
-        sql (str "select " (clojure.string/join ", " fields-str) " from " model-db-name
+        sql (str "select " (clojure.string/join ", " fields-strs) " from " model-db-name
                  (when (seq fields-join-query-strs)
                    (str " " (clojure.string/join " " fields-join-query-strs)))
                  (when (seq where-join-query-strs)
@@ -878,7 +872,8 @@
         ]
     (when debug?
       (prn query-vec))
-    `(jdbc/query (db-connection) ~query-vec)))
+    `(jdbc/query (db-connection) ~query-vec)
+    ))
 
 
 
@@ -900,24 +895,7 @@
 
 
 
-(defmacro aggregate
-  "Returns the aggregate values (averages, sums, count etc.) "
-  [model & {fields-list :fields where-condition :where debug? :debug?}]
-  (let [model (get-model model)
-        model-db-name (get-model-db-name model)
-        *tables (atom {:tables {model-db-name {}} :count 1})
-        fields-query-strs (get-aggregate-fields-query model fields-list)
-        [where-query-str values where-join-table] (get-where-query model where-condition *tables)
-        where-query-str (if where-query-str (str "where " where-query-str))
-        where-join-query-strs (get-join-table-query where-join-table)
-        sql (str "select " (clojure.string/join ", " fields-query-strs) " from " model-db-name " "
-                 (clojure.string/join " " where-join-query-strs) " "
-                 where-query-str)
-        query-vec (into [sql] values)]
-    (when debug?
-      (prn query-vec))
-    `(jdbc/query (db-connection) ~query-vec)
-    ))
+
 
 
 
@@ -926,6 +904,7 @@
   [& args]
   (apply jdbc/query (db-connection) args)
   )
+
 
 (defn raw-execute!
   "raw sql for insert, update, delete ..."

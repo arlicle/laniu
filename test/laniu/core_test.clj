@@ -134,6 +134,10 @@ Author
 (deliver b "jjj")
 (deliver a "Cool")
 
+
+(select Article
+        :aggregate [(count :id) (max :view_count) (min :view_count) (avg :view_count) (sum :view_count)])
+
 (defn aaa [a b  :as jj]
   (println "a:" a "b:" b "c:" jj)
   )

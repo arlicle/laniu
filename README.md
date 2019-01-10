@@ -257,7 +257,7 @@ When you define a model, the defmodel will auto define a data spec, when you ins
          :values {:full_name "Chris Zheng"}
          :where [:id 46 :full_name "chris"]
          :debug? true)
-["update ceshi_reporter   set ceshi_reporter.full_name=? where ceshi_reporter.id= ? and ceshi_reporter.full_name= ?" "Chris Zheng" 46 "chris"]
+["update ceshi_reporter set ceshi_reporter.full_name=? where ceshi_reporter.id= ? and ceshi_reporter.full_name= ?" "Chris Zheng" 46 "chris"]
 ; => 1
 
 ; update value , search with foreignkey model
@@ -270,6 +270,26 @@ When you define a model, the defmodel will auto define a data spec, when you ins
          :values {:category 9 :reporter 45}
          :where [:id 7])
 ; => 1
+```
+
+
+### update with function
+
+``` clojure
+(update! article
+         :values {:view_count (+ :view_count 10)})
+
+(def a 30)
+(update! article
+         :values {:view_count (* :view_count a)}
+         :where [:id 7])
+
+; update with more complex raq sql
+(update! article 
+         :values {:view_count (rawsql "view_count+id")}
+         :debug? true)
+["update ceshi_article set ceshi_article.view_count=(view_count+id) "]
+
 ```
 
 ### select data
@@ -483,17 +503,6 @@ with `not`, `not` only can contains one collection. (not [:id 1 :headline "xxx"]
 
 
 
-### update with function
-
-``` clojure
-(update! article
-         :values {:view_count (+ :view_count 10)})
-
-(def a 30)
-(update! article
-         :values {:view_count (* :view_count a)}
-         :where [:id 7])
-```
 
 
 ###  delete data
@@ -507,11 +516,18 @@ with `not`, `not` only can contains one collection. (not [:id 1 :headline "xxx"]
 Returns the aggregate values (avg, sum, count, min, max), the aggregate field will return count__id, max__view_count.
 
 ``` clojure
-(aggregate article
-           :fields [(count :id) (max :view_count) (min :view_count) (avg :view_count) (sum :view_count)]
+(select article
+           :aggregate [(count :id) (max :view_count) (min :view_count) (avg :view_count) (sum :view_count)]
            :debug? true)
 ["select count(ceshi_article.id) as count__id, max(ceshi_article.view_count) as max__view_count, min(ceshi_article.view_count) as min__view_count, avg(ceshi_article.view_count) as avg__view_count, sum(ceshi_article.view_count) as sum__view_count from ceshi_article  "]
 => ({:count__id 13, :max__view_count 600, :min__view_count 20, :avg__view_count 67.6923M, :sum__view_count 880M})
+
+; with alias
+(select article
+        :aggregate [[(count :id) :count_id] [(max :view_count) :max_view_count]]
+        :debug? true)
+["select count(ceshi_article.id) as count_id, max(ceshi_article.view_count) as max_view_count from ceshi_article"]
+=> ({:count_id 13, :max_view_count 600})
 ```
 
 ### run raw sql
