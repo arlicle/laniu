@@ -68,10 +68,25 @@ This setting maps database aliases, which are a way to refer to a specific datab
           :fields {:full_name {:type :char-field :max-length 70}}
           :meta {:db_table "ceshi_reporter"})
 
+; the database sql, the model will auto add a primary key :id
+ceshi_reporter | CREATE TABLE `ceshi_reporter` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `full_name` varchar(70) NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8
+
 (defmodel category
           :fields {:name       {:type :char-field :max-length 30}
                    :sort_order {:type :int-field :default 0}}
           :meta {:db_table "ceshi_category"})
+
+ceshi_category | CREATE TABLE `ceshi_category` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `name` varchar(30) NOT NULL,
+  `sort_order` int(11) NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8
+
 
 (defmodel article
           :fields {:headline   {:type :char-field :max-length 200}
@@ -82,12 +97,38 @@ This setting maps database aliases, which are a way to refer to a specific datab
                    :created    {:type :int-field :default #(quot (System/currentTimeMillis) 1000)}}
           :meta {:db_table "ceshi_article"})
 
+ceshi_article | CREATE TABLE `ceshi_article` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `headline` varchar(200) NOT NULL,
+  `content` longtext NOT NULL,
+  `reporter_id` int(11) NOT NULL,
+  `view_count` int(11) NOT NULL,
+  `category_id` int(11) DEFAULT NULL,
+  `created` int(11) NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `ceshi_article_reporter_id_45762308_fk_ceshi_reporter_id` (`reporter_id`),
+  KEY `ceshi_article_category_id_dc75abf4_fk_ceshi_category_id` (`category_id`),
+  CONSTRAINT `ceshi_article_category_id_dc75abf4_fk_ceshi_category_id` FOREIGN KEY (`category_id`) REFERENCES `ceshi_category` (`id`),
+  CONSTRAINT `ceshi_article_reporter_id_45762308_fk_ceshi_reporter_id` FOREIGN KEY (`reporter_id`) REFERENCES `ceshi_reporter` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8
+
 ; foreignkey to self
 (defmodel tree
           :fields {:name       {:type :char-field :max-length 30}
                    :parent     {:type :foreignkey :model :self}
                    :sort-order {:type :int-field :default 0}
                    })
+
+ceshi_tree | CREATE TABLE `ceshi_tree` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `name` varchar(30) NOT NULL,
+  `sort_order` int(11) NOT NULL,
+  `parent_id` int(11) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `ceshi_tree_parent_id_c2f9831f_fk_ceshi_tree_id` (`parent_id`),
+  CONSTRAINT `ceshi_tree_parent_id_c2f9831f_fk_ceshi_tree_id` FOREIGN KEY (`parent_id`) REFERENCES `ceshi_tree` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8
+
 ```
 
 when you define a model , It's automatic create the data spec.

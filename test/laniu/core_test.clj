@@ -104,6 +104,49 @@ Author
                :debug? true
                )
 
+(let [[a b] [1 2 3 4]]
+  (println "a:" a "b:" b)
+  )
+
+(let [{a :a ee :c} {:a 3 :c 33}]
+  (println a)
+  )
+
+{keyword :keyword}
+
+
+(let [a (future (apply + (range 1000)))
+      b (future (apply + (range 2000)))
+      ]
+  (+ @a @b)
+  )
+
+(def a (promise))
+(future (println "Hello the value a is " @a))
+(def b (promise))
+
+(future (println "I am b:" @b))
+
+(deliver a "哈哈哈")
+(deliver b "姐姐哦解耦")
+@b
+
+(deliver b "jjj")
+(deliver a "Cool")
+
+(defn aaa [a b  :as jj]
+  (println "a:" a "b:" b "c:" jj)
+  )
+
+(aaa 1 2 :c 33)
+
+(let [[a b c & {:keys [cc]} :as bb] [1 2 3 :cc 333]]
+  (println cc "bb:" bb)
+  )
+
+(let [[a b c :as cc] [1 2]]
+  (println "a:" a "b:" b "c:" c "cc:" cc)
+  )
 (update! Publisher :values {:name "ccccJJJ" :where [:id 44]})
 (select Publisher :where [:id 44])
 
