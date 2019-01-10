@@ -278,6 +278,6 @@ Author
 
 (select category :where [:article.headline "A funny joke"] :debug? true)
 
-(select article)
+(select article :where [:category.name "IT"] :debug? true)
 
 
