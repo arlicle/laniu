@@ -26,6 +26,14 @@
 ;               :debug? true)
 
 
+(let [*tables (atom {:tables {"ceshi_category" {}} :count 1})
+      *join-table (atom [])
+      s (get-field-db-name category :article.headline :*join-table *join-table :*tables *tables :from :where)
+      ]
+  (println "*tables:" @*tables)
+  (println "*join-table:" @*join-table)
+  (println "*s:" s)
+  )
 
 
 (defmodel tree
@@ -268,6 +276,8 @@ Author
                    :created    {:type :int-field :default #(quot (System/currentTimeMillis) 1000)}}
           :meta {:db_table "ceshi_article"})
 
-(select category :where [:article.headline "ccc"] :debug? true)
+(select category :where [:article.headline "A funny joke"] :debug? true)
+
+(select article)
 
 

@@ -530,7 +530,7 @@
       (let [m-data (meta model)]
         ; 如果没有，那么就从one2many中拿
         (if-let [f-model (get-in m-data [:one2many foreignkey-field :model])]
-          (get-field-db-column f-model (get-model-primary-key f-model)))))))
+          (get-field-db-column f-model field))))))
 
 
 
@@ -608,6 +608,7 @@
                                             " = " join-model-db-name "."
                                             (get-foreignkey-to-field-db-column model foreignkey-field)
                                             )]))
+            (println "link-table-field:" link-table-field)
             (str join-model-db-name "." (get-foreignkey-field-db-column model foreignkey-field link-table-field)))))
       (do
         (check-model-field model k)

@@ -444,6 +444,10 @@ with `not`, `not` only can contains one collection. (not [:id 1 :headline "xxx"]
         :where [:id 7])
 ;=> 
 ({:id 7, :headline "Apple make a phone", :name "IT", :reporter_full_name "Edison Rao"})
+
+; You also can filter from category to article
+(select category :where [:article.headline "ccc"] :debug? true)
+["select * from ceshi_category INNER JOIN ceshi_article ON (ceshi_category.id = ceshi_article.category_id) where ceshi_article.headline= ?" "A funny joke"]
 ```
 
 ### select foreignkey condition
@@ -464,9 +468,6 @@ with `not`, `not` only can contains one collection. (not [:id 1 :headline "xxx"]
 ; => 
 ({:id 7, :headline "Apple make a phone", :content "bala babla ....", :name "IT", :full_name "Edison Rao"})
 
-; You also can filter from category to article
-(select category :where [:article.headline "ccc"] :debug? true)
-["select * from ceshi_category INNER JOIN ceshi_article ON (ceshi_category.id = ceshi_article.category_id) where ceshi_article.id= ?" "ccc"]
 ```
 
 ### select with function
