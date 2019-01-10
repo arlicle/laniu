@@ -895,10 +895,6 @@
 
 
 
-
-
-
-
 (defn raw-query
   "raw sql query for select"
   [& args]
