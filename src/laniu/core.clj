@@ -764,6 +764,14 @@
 
 
 
+(defn get-aggregate-alias
+  "fix the count *"
+  [k]
+  (if (not= '* k)
+    (str "__" k)
+    ))
+
+
 (defn get-aggregate-fields-query
   [model fields]
   (map (fn a-func [item & x]
@@ -773,12 +781,15 @@
            (let [[as-k op k] (if (vector? item)
                                ; 如果需要用到别名
                                (cons (str " as " (name (last item))) (first item))
-                               (cons (str " as " (first item) "__" (name (second item))) item)
+                               (cons (str " as " (first item) (get-aggregate-alias (second item))) item)
                                )
 
-                 k2 (if (keyword? k)
-                      (get-field-db-name model k)
-                      (a-func k true))]
+                 k2 (cond (keyword? k)
+                          (get-field-db-name model k)
+                          (= '* k)
+                          "*"
+                          :else
+                          (a-func k true))]
              (if (nil? x)
                (str op "(" k2 ")" as-k)
                (str op "(" k2 ")")))))
@@ -850,9 +861,8 @@
 
 
 (defmacro select
-  [model & {fields-list :fields aggregate-fields :aggregate where-condition :where debug? :debug?}]
+  [model & {fields-list :fields aggregate-fields :aggregate annotate-fields :annotate where-condition :where debug? :debug?}]
   (let [model (get-model model)
-        _ (println "model:" model)
         model-db-name (get-model-db-name model)
         *tables (atom {:tables {model-db-name {}} :count 1})
         [where-query-str values where-join-table] (get-where-query model where-condition *tables)

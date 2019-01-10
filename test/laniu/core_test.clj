@@ -135,14 +135,8 @@ Author
 (deliver a "Cool")
 
 
-(select Article
-        :aggregate [(count :id) (max :view_count) (min :view_count) (avg :view_count) (sum :view_count)])
 
-(defn aaa [a b  :as jj]
-  (println "a:" a "b:" b "c:" jj)
-  )
 
-(aaa 1 2 :c 33)
 
 (let [[a b c & {:keys [cc]} :as bb] [1 2 3 :cc 333]]
   (println cc "bb:" bb)
@@ -166,8 +160,7 @@ Author
 
 
 
-(select Book :fields [:name :authors.name])
-(defmodel tree-data)
+
 
 
 (create-model-db-name "model-name" "ns-name.fdfa-fdsaf")
@@ -190,16 +183,17 @@ Author
   (println "generated_key" generated_key)
   )
 
-(defmodel Store
-          :fields {:name  {:type :char-field :max-length 60}
-                   :books {:type :many-to-many-field :model Book}}
-          :meta {:db_table "ceshi_store"})
+
 
 (insert! Book
          :values {:name "Living Clojure" :pages 250 :price 23 :rating 5 :pubdate 2005}
          :debug? true
          )
+
+
 (select Book)
+
+(update! Book :values {:name "JVM Performance"} :where [:id 3])
 
 (select Publisher)
 
@@ -208,6 +202,8 @@ Author
           :meta {:db_table "ceshi_publisher"})
 
 (insert! Publisher :values {:name "aaa"})
+
+
 (defmodel Book
           :fields {:name      {:type :char-field :max-length 60}
                    :pages     {:type :int-field}
@@ -218,6 +214,11 @@ Author
                    :pubdate   {:type :int-field}}
           :meta {:db_table "ceshi_book"})
 
+;Book.objects.filter(publisher__name='BaloneyPress').count()
+(select Book :where [:publisher.name "ccccJJJ"]
+        :aggregate [(count *)]
+        :debug? true
+        )
 
 (insert! Book
          :values {:name "Living Clojure" :pages 250 :price 23 :rating 5 :pubdate 2005 :publisher 1}
