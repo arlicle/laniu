@@ -768,7 +768,7 @@
   "fix the count *"
   [k]
   (if (not= '* k)
-    (str "__" k)
+    (str "__" (name k))
     ))
 
 

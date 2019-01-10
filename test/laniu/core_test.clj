@@ -148,14 +148,14 @@ Author
 (update! Publisher :values {:name "ccccJJJ" :where [:id 44]})
 (select Publisher :where [:id 44])
 
-(defmodel Book
-          :fields {:name    {:type :char-field :max-length 60}
-                   :pages   {:type :int-field}
-                   :price   {:type :float-field :default 0}
-                   :rating  {:type :tiny-int-field :choices [[-1 "未评分"] [0 "0分"] [1 "1分"] [2 "2分"] [3 "3分"] [4 "4分"] [5 "5分"]]}
-                   :authors {:type :many-to-many-field :model Publisher}
-                   :pubdate {:type :int-field}}
-          :meta {:db_table "ceshi_book"})
+;(defmodel Book
+;          :fields {:name    {:type :char-field :max-length 60}
+;                   :pages   {:type :int-field}
+;                   :price   {:type :float-field :default 0}
+;                   :rating  {:type :tiny-int-field :choices [[-1 "未评分"] [0 "0分"] [1 "1分"] [2 "2分"] [3 "3分"] [4 "4分"] [5 "5分"]]}
+;                   :authors {:type :many-to-many-field :model Publisher}
+;                   :pubdate {:type :int-field}}
+;          :meta {:db_table "ceshi_book"})
 
 
 
@@ -186,7 +186,7 @@ Author
 
 
 (insert! Book
-         :values {:name "Living Clojure" :pages 250 :price 23 :rating 5 :pubdate 2005}
+         :values {:name "Living Clojure" :pages 250 :price 23 :rating 5 :pubdate 2005 :publisher 2}
          :debug? true
          )
 
@@ -204,6 +204,12 @@ Author
 (insert! Publisher :values {:name "aaa"})
 
 
+
+(defmodel Author
+          :fields {:name {:type :char-field :max-length 100}
+                   :age {:type :int-field}}
+          :meta {:db_table "ceshi_author"})
+
 (defmodel Book
           :fields {:name      {:type :char-field :max-length 60}
                    :pages     {:type :int-field}
@@ -215,8 +221,13 @@ Author
           :meta {:db_table "ceshi_book"})
 
 ;Book.objects.filter(publisher__name='BaloneyPress').count()
-(select Book :where [:publisher.name "ccccJJJ"]
+(select Book :where [:publisher.name "BaloneyPress"]
         :aggregate [(count *)]
+        :debug? true
+        )
+
+(select Book
+        :aggregate [(avg :price)]
         :debug? true
         )
 

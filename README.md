@@ -529,6 +529,19 @@ Returns the aggregate values (avg, sum, count, min, max), the aggregate field wi
 ["select count(ceshi_article.id) as count_id, max(ceshi_article.view_count) as max_view_count from ceshi_article"]
 => ({:count_id 13, :max_view_count 600})
 ```
+### Example from django aggregation
+``` clojure
+
+
+; Total number of books with publisher=BaloneyPress
+(select Book :where [:publisher.name "BaloneyPress"]
+        :aggregate [(count *)]
+        :debug? true
+        )
+["select count(*) as count from ceshi_book INNER JOIN ceshi_publisher ON (ceshi_book.publisher_id = ceshi_publisher.id) where ceshi_publisher.name= ?" "BaloneyPress"]
+
+; Average price across all books.
+```
 
 ### run raw sql
 
