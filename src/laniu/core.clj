@@ -241,8 +241,6 @@
                        (let [choices-map (into {} choices)]
                          `#(contains? ~choices-map %)))
         ]
-
-
     (filterv identity [`int? max-value-spec min-value-spec choices-spec])
     ))
 
@@ -294,8 +292,6 @@
                          `#(contains? ~choices-map %)))
         type-spec `#(or (int? %) (float? %))
         ]
-
-
     (filterv identity [type-spec max-value-spec min-value-spec choices-spec])
     ))
 
@@ -320,11 +316,16 @@
 
 
 
+(defn model-name-to-key
+  [model-name]
+  (keyword (clojure.string/lower-case model-name)))
+
+
 (defn optimi-model-fields
   "index more db field data from field type
   a primary key field will automatically be added to model if you don’t specify otherwise.
   "
-  [fields]
+  [model-name fields]
   (let [*primary_key (atom nil)
         default {}
         new-fields (reduce (fn [r [k v]]
@@ -333,7 +334,7 @@
                              (assoc r k
                                       (case (:type v)
                                         :foreignkey
-                                        (merge default {:db_column (str (name k) "_id") :to_field :id} v)
+                                        (merge default {:db_column (str (name k) "_id") :to_field :id :related-key (model-name-to-key model-name)} v)
                                         (merge default {:db_column (name k)} v)
                                         ))
                              ) {} fields)]
@@ -367,19 +368,22 @@
   [model-name & {fields-configs :fields meta-configs :meta methods-config :methods :or {meta-configs {} methods-config {}}}]
   (let [
         ns-name (str (ns-name *ns*))
-        [fields-configs pk] (optimi-model-fields fields-configs)
-        {req-fields :req opt-fields :opt opt-fields2 :opt2 un-insert-fields :ui}
+        [fields-configs pk] (optimi-model-fields model-name fields-configs)
+        {req-fields :req opt-fields :opt opt-fields2 :opt2 un-insert-fields :ui foreignkey-fields :fr}
         (reduce (fn [r [k v]]
                   (if (or (contains? #{:auto-field :many-to-many-field} (:type v)) (contains? v :default) (:blank? v))
-                    (-> (if (= :many-to-many-field (:type v))
-                          (update-in r [:ui] conj k) r)
+                    (-> (case (:type v)
+                          :many-to-many-field
+                          (update-in r [:ui] conj k)
+                          :foreignkey
+                          (assoc-in r [:fr k] v)
+                          r)
                         (update-in [:opt] conj (keyword (str ns-name "." (name model-name)) (name k)))
                         (update-in [:opt2] assoc k (:default v)))
-                    (update-in r [:req] conj (keyword (str ns-name "." (name model-name)) (name k)))
+                    (-> (if (= :foreignkey (:type v)) (assoc-in r [:fr k] v) r)
+                        (update-in [:req] conj (keyword (str ns-name "." (name model-name)) (name k))))
                     )
-                  ) {:req [] :opt [] :opt2 {} :ui #{}} fields-configs)
-
-
+                  ) {:req [] :opt [] :opt2 {} :ui #{} :fr {}} fields-configs)
         models-fields (with-meta fields-configs
                                  {
                                   :fields               (set (keys fields-configs))
@@ -389,7 +393,6 @@
                                   :ns-name              ns-name
                                   :primary-key          pk
                                   :meta                 (merge {:db_table (create-model-db-name model-name ns-name)} meta-configs)})]
-
     `(do
        ~@(for [[k field-opts] fields-configs]
            `($s/def
@@ -434,7 +437,19 @@
 
        (def ~(symbol model-name)
          ~models-fields
-         ))))
+         )
+       ~@(for [[k v] foreignkey-fields]
+           `(def ~(symbol (:model v))
+              (vary-meta ~(symbol (:model v)) assoc-in [:one2many ~(:related-key v)]
+                         {:model ~(symbol model-name)
+                          :field ~k
+                          }))))))
+
+
+
+(defn get-model-primary-key
+  [model]
+  (:primary-key (meta model)))
 
 
 
@@ -452,12 +467,18 @@
 
 (defn get-field-db-column
   [model field]
-  (get-in model [field :db_column]))
+  (if-let [c (get-in model [field :db_column])]
+    c
+    ; if field db_column is nil , get from one2many
+    (get-field-db-column model (get-model-primary-key model))
+    ))
+
 
 
 (defn get-model-fields
   [model]
   (:fields (meta model)))
+
 
 
 (defn get-model-default-fields
@@ -466,15 +487,10 @@
 
 
 
-(defn get-model-primary-key
-  [model]
-  (:primary-key (meta model)))
-
-
-
 (defn get-model-name
   [model]
   (:name (meta model)))
+
 
 
 (defn get-model&table-name
@@ -490,7 +506,7 @@
   "
   ([model field] (check-model-field model field nil))
   ([model field field-type]
-   (if (not (contains? (get-model-fields model) field))
+   (if (and (not (contains? (get-model-fields model) field)) (not (get-in (meta model) [:one2many field])))
      (throw (Exception. (str "field " field " is not in model " (get-model-name model)))))
    (if (and field-type (not= (get-in model [field :type]) field-type))
      (throw (Exception. (str "only :foreignkey field can related search. "
@@ -501,20 +517,36 @@
 
 
 
+
 (defn get-foreignkey-field-db-column
+  "获取foreignkey字段对应的db column
+  如果当前没有这个foreignkey字段，那么可能是one2many的字段，那么这边的字段就是当前model的primary key
+  "
   [model foreignkey-field field]
   (if (= :self (get-in model [foreignkey-field :model]))
     (get-in model [field :db_column])
-    (get-in model [foreignkey-field :model field :db_column])
-    ))
+    (if-let [c (get-in model [foreignkey-field :model field :db_column])]
+      c
+      (let [m-data (meta model)]
+        ; 如果没有，那么就从one2many中拿
+        (if-let [f-model (get-in m-data [:one2many foreignkey-field :model])]
+          (get-field-db-column f-model (get-model-primary-key f-model)))))))
+
 
 
 (defn get-foreignkey-to-field-db-column
+  "获取foreignkey对应对面的db column，
+  如果当前没有这个foreignkey的字段，那么可能是one2many字段，那么就要从m-data中获取对应字段和对应字段的db column
+  "
   [model foreignkey-field]
-  (let [to-field (get-in model [foreignkey-field :to_field])]
+  (if-let [to-field (get-in model [foreignkey-field :to_field])]
     (if (keyword? to-field)
       (get-foreignkey-field-db-column model foreignkey-field to-field)
-      to-field)))
+      to-field)
+    ; from one2many
+    (let [m-data (meta model)]
+      (if-let [[f-model f-field] [(get-in m-data [:one2many foreignkey-field :model]) (get-in m-data [:one2many foreignkey-field :field])]]
+        (get-field-db-column f-model f-field)))))
 
 
 
@@ -538,6 +570,23 @@
 
 
 
+(defn get-foreignkey-model-db-name
+  [model foreignkey-field]
+  (let [f-model (get-in model [foreignkey-field :model])
+        m-data (get-in (meta model) [:one2many foreignkey-field :model])]
+    (cond
+      ; foreignkey to self
+      (= f-model :self)
+      (get-model-db-name model)
+      ; one2many
+      (and (nil? f-model) m-data)
+      (get-model-db-name m-data)
+      :else
+      (get-model-db-name f-model)
+      )))
+
+
+
 (defn get-field-db-name
   [model k & {:keys [*join-table *tables from]}]
   (let [k_name (name k) model-db-table (get-model-db-name model)]
@@ -545,9 +594,8 @@
       (let [foreignkey-field (keyword foreingnkey-field-name)
             link-table-field (keyword link-table-field)
             _ (check-model-field model foreignkey-field)
-            join-model-db-name (get-model-db-name (get-in model [foreignkey-field :model]) model)
+            join-model-db-name (get-foreignkey-model-db-name model foreignkey-field)
             join-table (get-foreignkey-table model *tables from foreignkey-field join-model-db-name)
-
             ; 处理数据库别名问题
             join-model-db-name (if-let [table-alias (get join-table 3)] table-alias (get join-table 1))]
         (if (= :id link-table-field)
@@ -860,6 +908,13 @@
 
 
 
+
+(defn get-annotate-query
+  [model fields]
+  (println "get-annotage-query" fields)
+  )
+
+
 (defmacro select
   [model & {fields-list :fields aggregate-fields :aggregate annotate-fields :annotate where-condition :where debug? :debug?}]
   (let [model (get-model model)
@@ -880,10 +935,10 @@
                    (str " where " where-query-str)))
         query-vec (into [sql] (filter #(not (nil? %)) values))
         ]
+    ;(println (get-annotate-query model annotate-fields))
     (when debug?
       (prn query-vec))
-    `(jdbc/query (db-connection) ~query-vec)
-    ))
+    `(jdbc/query (db-connection) ~query-vec)))
 
 
 

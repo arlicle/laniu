@@ -192,6 +192,7 @@ Author
 (insert! Publisher :values {:name "aaa"})
 
 
+(select Publisher :annotate [(count :book)])
 
 (defmodel Author
           :fields {:name {:type :char-field :max-length 100}
@@ -204,7 +205,7 @@ Author
                    :price     {:type :float-field :default 0}
                    :rating    {:type :tiny-int-field :choices [[-1 "未评分"] [0 "0分"] [1 "1分"] [2 "2分"] [3 "3分"] [4 "4分"] [5 "5分"]]}
                    :authors   {:type :many-to-many-field :model Publisher}
-                   :publisher {:type :foreignkey :model Publisher}
+                   :publisher {:type :foreignkey :model Publisher :related-name :book}
                    :pubdate   {:type :int-field}}
           :meta {:db_table "ceshi_book"})
 
@@ -223,3 +224,50 @@ Author
          :values {:name "Living Clojure" :pages 250 :price 23 :rating 5 :pubdate 2005 :publisher 1}
          :debug? true
          )
+
+
+
+
+
+
+
+
+
+
+(defmodel Publisher
+          :fields {:name {:type :char-field :max-length 60}
+                   :book {:type :foreignkey :model Book :related-name :book}
+                   }
+          :meta {:db_table "ceshi_publisher"})
+;
+(defmodel Book
+          :fields {:name      {:type :char-field :max-length 60}
+                   :pages     {:type :int-field}
+                   :price     {:type :float-field :default 0}
+                   :rating    {:type :tiny-int-field :choices [[-1 "未评分"] [0 "0分"] [1 "1分"] [2 "2分"] [3 "3分"] [4 "4分"] [5 "5分"]]}
+                   :publisher {:type :foreignkey :model Publisher :related-key :book}
+                   :pubdate   {:type :int-field}}
+          :meta {:db_table "ceshi_book"})
+
+
+(defmodel reporter
+          :fields {:full_name {:type :char-field :max-length 70}}
+          :meta {:db_table "ceshi_reporter"})
+
+(defmodel category
+          :fields {:name       {:type :char-field :max-length 30}
+                   :sort_order {:type :int-field :default 0}}
+          :meta {:db_table "ceshi_category"})
+
+(defmodel article
+          :fields {:headline   {:type :char-field :max-length 200}
+                   :content    {:type :text-field}
+                   :view_count {:type :int-field :default 0}
+                   :reporter   {:type :foreignkey :model reporter :on-delete :cascade}
+                   :category   {:type :foreignkey :model category :on-delete :set-null :blank true}
+                   :created    {:type :int-field :default #(quot (System/currentTimeMillis) 1000)}}
+          :meta {:db_table "ceshi_article"})
+
+(select category :where [:article.headline "ccc"] :debug? true)
+
+
