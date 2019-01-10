@@ -469,9 +469,17 @@
   [model field]
   (if-let [c (get-in model [field :db_column])]
     c
-    ; if field db_column is nil , get from one2many
-    (get-field-db-column model (get-model-primary-key model))
+    ; if field db_column is nil , get from one2many self.id=foreignkey-model.foreignkey-field
+    (let [m-data (meta model)]
+      (if-let [[f-model f-field] [(get-in m-data [:one2many field :model]) (get-in m-data [:one2many field :field])]]
+        (if-let [to-field (get-in f-model [f-field :to_field])]
+          (if (keyword? to-field)
+            (get-foreignkey-field-db-column f-model f-field to-field)
+            to-field)
+          )
+        ))
     ))
+
 
 
 
@@ -520,7 +528,7 @@
 
 (defn get-foreignkey-field-db-column
   "获取foreignkey字段对应的db column
-  如果当前没有这个foreignkey字段，那么可能是one2many的字段，那么这边的字段就是当前model的primary key
+  如果当前没有这个foreignkey字段，那么可能是one2many的字段，从foreignkey model中来取对应字段
   "
   [model foreignkey-field field]
   (if (= :self (get-in model [foreignkey-field :model]))
@@ -531,6 +539,7 @@
         ; 如果没有，那么就从one2many中拿
         (if-let [f-model (get-in m-data [:one2many foreignkey-field :model])]
           (get-field-db-column f-model field))))))
+
 
 
 
@@ -551,26 +560,34 @@
 
 
 (defn get-foreignkey-table
+  "获取关联表相关信息
+  [from-where-or-select-or-nil join-model-db-name foreignkey-field alias is-field-allow-null?]
+  "
   [model *tables from foreignkey-field join-model-db-name]
-  (if *tables
-    (let [tables @*tables a (get-in tables [:tables join-model-db-name]) c (inc (:count tables)) null? (get-in model [foreignkey-field :null?])]
-      (cond
-        (nil? a)
-        (do
-          (swap! *tables update-in [:tables join-model-db-name] assoc foreignkey-field nil)
-          (swap! *tables assoc :count c)
-          [from join-model-db-name foreignkey-field nil null?])
-        (not (contains? a foreignkey-field))
-        (do
-          (swap! *tables update-in [:tables join-model-db-name] assoc foreignkey-field (str "T" c))
-          (swap! *tables assoc :count c)
-          [from join-model-db-name foreignkey-field (str "T" c) null?])
-        :else
-        [nil join-model-db-name foreignkey-field (get-in tables [:tables join-model-db-name foreignkey-field]) null?]))))
+
+  (let [tables @*tables a (get-in tables [:tables join-model-db-name]) c (inc (:count tables)) null? (get-in model [foreignkey-field :null?])]
+    (cond
+      (nil? a)
+      (do
+        (swap! *tables update-in [:tables join-model-db-name] assoc foreignkey-field nil)
+        (swap! *tables assoc :count c)
+        [from join-model-db-name foreignkey-field nil null?])
+      (not (contains? a foreignkey-field))
+      (do
+        (swap! *tables update-in [:tables join-model-db-name] assoc foreignkey-field (str "T" c))
+        (swap! *tables assoc :count c)
+        [from join-model-db-name foreignkey-field (str "T" c) null?])
+      :else
+      [nil join-model-db-name foreignkey-field (get-in tables [:tables join-model-db-name foreignkey-field]) null?])))
 
 
 
 (defn get-foreignkey-model-db-name
+  "获取foreignkey对应的数据库
+  1 如果foreignkey 到:self，那么拿自身即可
+  2 正常foreignkey,直接从 foreignkey model中获取
+  3 如果是被foreignkey, 那么从one2many，中获取model，
+  "
   [model foreignkey-field]
   (let [f-model (get-in model [foreignkey-field :model])
         m-data (get-in (meta model) [:one2many foreignkey-field :model])]
@@ -589,8 +606,9 @@
 
 (defn get-field-db-name
   [model k & {:keys [*join-table *tables from]}]
-  (let [k_name (name k) model-db-table (get-model-db-name model)]
-    (if-let [[_ foreingnkey-field-name link-table-field] (re-find #"(\w+)\.(\w+)" k_name)]
+  (let [k_name (name k) model-db-table (get-model-db-name model)
+        [_ foreingnkey-field-name link-table-field] (re-find #"(\w+)\.(\w+)" k_name)]
+    (if (and foreingnkey-field-name link-table-field *join-table *tables)
       (let [foreignkey-field (keyword foreingnkey-field-name)
             link-table-field (keyword link-table-field)
             _ (check-model-field model foreignkey-field)
@@ -601,13 +619,12 @@
         (if (= :id link-table-field)
           (str model-db-table "." (get-field-db-column model foreignkey-field))
           (do
-            (if *join-table
-              (swap! *join-table conj [join-table
-                                       (str model-db-table "."
-                                            (get-field-db-column model foreignkey-field)
-                                            " = " join-model-db-name "."
-                                            (get-foreignkey-to-field-db-column model foreignkey-field)
-                                            )]))
+            (swap! *join-table conj [join-table
+                                     (str model-db-table "."
+                                          (get-field-db-column model foreignkey-field)
+                                          " = " join-model-db-name "."
+                                          (get-foreignkey-to-field-db-column model foreignkey-field)
+                                          )])
             (println "link-table-field:" link-table-field)
             (str join-model-db-name "." (get-foreignkey-field-db-column model foreignkey-field link-table-field)))))
       (do
