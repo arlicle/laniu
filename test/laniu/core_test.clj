@@ -8,8 +8,14 @@
 
 
 
+(defdb
+  {:default {:adapter       "mysql"
+             :username      "root"
+             :password      "123"
+             :database-name "projectx2"
+             :server-name   "localhost"
+             :port-number   3306}})
 
-(meta @*current-pooled-dbs)
 (defdb
   {:default {:adapter       "mysql"
              :username      "root"
@@ -25,8 +31,7 @@
              :port-number   3306
              :read-only     true}})
 
-
-(select)
+(meta @*current-pooled-dbs)
 
 (def datasource-options {:adapter       "mysql"
                          :username      "root"

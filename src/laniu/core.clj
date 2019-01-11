@@ -584,12 +584,12 @@
     (cond
       ; foreignkey to self
       (= f-model :self)
-      (get-model-db-name model)
+      [:self (get-model-db-name model)]
       ; one2many
       (and (nil? f-model) m-data)
-      (get-model-db-name m-data)
+      [:one2many (get-model-db-name m-data)]
       :else
-      (get-model-db-name f-model)
+      [:field (get-model-db-name f-model)]
       )))
 
 
@@ -597,16 +597,16 @@
 (defn get-field-db-name
   [model k & {:keys [*join-table *tables from]}]
   (let [k_name (name k) model-db-table (get-model-db-name model)
-        [_ foreingnkey-field-name link-table-field] (re-find #"(\w+)\.(\w+)" k_name)]
+        [_ foreingnkey-field-name link-table-field] (re-find #"([\w-]+)\.([\w-]+)" k_name)]
     (if (and foreingnkey-field-name link-table-field *join-table *tables)
       (let [foreignkey-field (keyword foreingnkey-field-name)
             link-table-field (keyword link-table-field)
             _ (check-model-field model foreignkey-field)
-            join-model-db-name (get-foreignkey-model-db-name model foreignkey-field)
+            [r-type join-model-db-name] (get-foreignkey-model-db-name model foreignkey-field)
             join-table (get-foreignkey-table model *tables from foreignkey-field join-model-db-name)
             ; 处理数据库别名问题
             join-model-db-name (if-let [table-alias (get join-table 3)] table-alias (get join-table 1))]
-        (if (= :id link-table-field)
+        (if (and (= :id link-table-field) (not= r-type :one2many))
           (str model-db-table "." (get-field-db-column model foreignkey-field))
           (do
             (swap! *join-table conj [join-table
@@ -642,7 +642,7 @@
   [join-table]
   (reduce (fn [r [[from table _ alias null?] s]]
             (if from
-              (let [join-type (case from :fields (if null? "LEFT" "INNER") :where "INNER")
+              (let [join-type (case from (:fields :annotate) (if null? "LEFT" "INNER") :where "INNER")
                     table (if alias (str table " " alias) table)]
                 (conj r (str join-type " JOIN " table " ON (" s ")")))
               r
@@ -804,8 +804,7 @@
   [model fields *tables]
   (if (seq fields)
     (let [*join-table (atom [])]
-      [
-       (mapv (fn [k]
+      [(mapv (fn [k]
                (if (= (type k) clojure.lang.Keyword)
                  ; 一种是字段直接就是关键字，表示字段名
                  (get-field-db-name model k :*join-table *join-table :*tables *tables :from :fields)
@@ -815,8 +814,16 @@
                    )))
              fields)
        @*join-table])
-    ["*" nil]))
+    ; 处理为每个字段
+    [(mapv #(get-field-db-name model %) (:fields (meta model))) nil]))
 
+
+(defn get-annotate-key
+  [key]
+  (let [skey (name key)]
+    (if (re-matches #"[\w-]+\.[\w-]+" skey)
+      key
+      (keyword (str skey ".id")))))
 
 
 (defn get-aggregate-alias
@@ -849,6 +856,36 @@
                (str op "(" k2 ")" as-k)
                (str op "(" k2 ")")))))
        fields))
+
+
+(defn parse-group-by
+  [model fields]
+  (mapv
+    (fn [k]
+      (get-field-db-name model k)
+      )
+    fields
+    ))
+
+
+(defn get-annotate-query
+  [model fields *tables]
+  (let [*join-table (atom [])
+        group-by [(get-field-db-name model (get-model-primary-key model))]
+        ]
+    [(mapv
+       (fn [item]
+         (cond
+           (list? item)
+           (let [[op key] item]
+             (str op "(" (get-field-db-name model (get-annotate-key key) :*join-table *join-table :*tables *tables :from :annotate) ")")
+             )
+           (and (vector? item) (list? (first item)) (keyword? (second item)))
+           (let [[[op key] alias] item]
+             (str op "(" (get-field-db-name model (get-annotate-key key) :*join-table *join-table :*tables *tables :from :annotate) ")" (if alias (str " as " (name alias))))
+             )))
+       fields)
+     @*join-table group-by]))
 
 
 
@@ -915,15 +952,8 @@
 
 
 
-
-(defn get-annotate-query
-  [model fields]
-  (println "get-annotage-query" fields)
-  )
-
-
 (defmacro select
-  [model & {fields-list :fields aggregate-fields :aggregate annotate-fields :annotate where-condition :where debug? :debug?}]
+  [model & {fields-list :fields aggregate-fields :aggregate annotate-fields :annotate where-condition :where debug? :debug? group-by :group-by}]
   (let [model (get-model model)
         model-db-name (get-model-db-name model)
         *tables (atom {:tables {model-db-name {}} :count 1})
@@ -931,21 +961,27 @@
         [fields-strs field-join-table] (if aggregate-fields
                                          [(get-aggregate-fields-query model aggregate-fields)]
                                          (get-select-fields-query model fields-list *tables))
-        fields-join-query-strs (get-join-table-query field-join-table)
+        [annotate-strs annotate-join-table group-by2] (if annotate-fields (get-annotate-query model annotate-fields *tables))
+        group-str (if group-by2 group-by2 (parse-group-by model group-by))
+        fields-join-query-strs (get-join-table-query (concat field-join-table annotate-join-table))
         where-join-query-strs (get-join-table-query where-join-table)
-        sql (str "select " (clojure.string/join ", " fields-strs) " from " model-db-name
+        sql (str "select " (clojure.string/join ", " (concat fields-strs annotate-strs)) " from " model-db-name
                  (when (seq fields-join-query-strs)
                    (str " " (clojure.string/join " " fields-join-query-strs)))
                  (when (seq where-join-query-strs)
                    (str " " (clojure.string/join " " where-join-query-strs)))
                  (when (and where-query-str (not= "" where-query-str))
-                   (str " where " where-query-str)))
+                   (str " where " where-query-str))
+                 (when group-str
+                   (str " group by " (clojure.string/join ", " group-str))
+                   )
+                 )
         query-vec (into [sql] (filter #(not (nil? %)) values))
         ]
-    ;(println (get-annotate-query model annotate-fields))
     (when debug?
       (prn query-vec))
-    `(jdbc/query (db-connection) ~query-vec)))
+    `(jdbc/query (db-connection) ~query-vec)
+    ))
 
 
 
@@ -970,14 +1006,43 @@
 (defn raw-query
   "raw sql query for select"
   [& args]
-  (apply jdbc/query (db-connection) args)
-  )
+  (apply jdbc/query (db-connection) args))
 
 
 (defn raw-execute!
   "raw sql for insert, update, delete ..."
   [& args]
-  (apply jdbc/execute! (db-connection) args)
-  )
+  (apply jdbc/execute! (db-connection) args))
 
 
+
+(defdb
+  {:default {:adapter       "mysql"
+             :username      "root"
+             :password      "123"
+             :database-name "projectx2"
+             :server-name   "localhost"
+             :port-number   3306
+             :use-ssl       false}})
+
+
+
+(defmodel reporter
+          :fields {:full_name {:type :char-field :max-length 70}}
+          :meta {:db_table "ceshi_reporter"})
+
+(defmodel category
+          :fields {:name       {:type :char-field :max-length 30}
+                   :sort_order {:type :int-field :default 0}}
+          :meta {:db_table "ceshi_category"})
+
+(defmodel article
+          :fields {:headline   {:type :char-field :max-length 200}
+                   :content    {:type :text-field}
+                   :view_count {:type :int-field :default 0}
+                   :reporter   {:type :foreignkey :model reporter :on-delete :cascade}
+                   :category   {:type :foreignkey :model category :on-delete :set-null :blank true :related-key :article}
+                   :created    {:type :int-field :default #(quot (System/currentTimeMillis) 1000)}}
+          :meta {:db_table "ceshi_article"})
+
+(select category :annotate [[(count :article) :article_count]] :debug? true)

@@ -549,8 +549,13 @@ Returns the aggregate values (avg, sum, count, min, max), the aggregate field wi
         :debug? true
         )
 ["select avg(ceshi_book.price) as avg__price from ceshi_book"]
+```
+### Annotate
+```
+(select category :annotate [[(count :article) :article_count]] :debug? true)
 
-
+(select category :annotate [[(count :article) :article_count]] :debug? true)
+["select ceshi_category.name, ceshi_category.sort_order, ceshi_category.id, count(ceshi_article.id) as article_count from ceshi_category INNER JOIN ceshi_article ON (ceshi_category.id = ceshi_article.category_id) group by ceshi_category.id"]
 ```
 
 ### run raw sql
@@ -573,7 +578,6 @@ If you need a more complex form of sql, you can use `raw-query` and `raw-execute
 ```
 
 ## To do list
-#### Annotate
 #### ManyToMantField
 #### Document
 #### Create table
