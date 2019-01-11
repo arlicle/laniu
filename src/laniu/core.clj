@@ -862,10 +862,8 @@
   [model fields]
   (mapv
     (fn [k]
-      (get-field-db-name model k)
-      )
-    fields
-    ))
+      (get-field-db-name model k))
+    fields))
 
 
 (defn get-annotate-query
@@ -897,9 +895,7 @@
       (let [[insert-data mdata]
             (if clean-data?
               (clean-insert-model-data model values)
-              values
-              )
-            ]
+              values)]
         (when debug?
           (prn "insert data to db " (keyword db-table-name) " : " insert-data))
         (let [[{:keys [generated_key]}] (jdbc/insert! (db-connection) (keyword db-table-name) insert-data)]
@@ -918,8 +914,7 @@
                                    (if ($s/valid? model-key item)
                                      (first (clean-insert-model-data model item))
                                      (throw (Exception. (str "error-data in row : " idx " , " item)))
-                                     )
-                                   ) values)
+                                     )) values)
                     values)]
     (when debug?
       (prn "db:" (keyword db-table-name) " items:" new-items))
@@ -980,8 +975,7 @@
         ]
     (when debug?
       (prn query-vec))
-    `(jdbc/query (db-connection) ~query-vec)
-    ))
+    `(jdbc/query (db-connection) ~query-vec)))
 
 
 
@@ -1013,36 +1007,3 @@
   "raw sql for insert, update, delete ..."
   [& args]
   (apply jdbc/execute! (db-connection) args))
-
-
-
-(defdb
-  {:default {:adapter       "mysql"
-             :username      "root"
-             :password      "123"
-             :database-name "projectx2"
-             :server-name   "localhost"
-             :port-number   3306
-             :use-ssl       false}})
-
-
-
-(defmodel reporter
-          :fields {:full_name {:type :char-field :max-length 70}}
-          :meta {:db_table "ceshi_reporter"})
-
-(defmodel category
-          :fields {:name       {:type :char-field :max-length 30}
-                   :sort_order {:type :int-field :default 0}}
-          :meta {:db_table "ceshi_category"})
-
-(defmodel article
-          :fields {:headline   {:type :char-field :max-length 200}
-                   :content    {:type :text-field}
-                   :view_count {:type :int-field :default 0}
-                   :reporter   {:type :foreignkey :model reporter :on-delete :cascade}
-                   :category   {:type :foreignkey :model category :on-delete :set-null :blank true :related-key :article}
-                   :created    {:type :int-field :default #(quot (System/currentTimeMillis) 1000)}}
-          :meta {:db_table "ceshi_article"})
-
-(select category :annotate [[(count :article) :article_count]] :debug? true)
