@@ -551,9 +551,7 @@ Returns the aggregate values (avg, sum, count, min, max), the aggregate field wi
 ["select avg(ceshi_book.price) as avg__price from ceshi_book"]
 ```
 ### Annotate
-```
-(select category :annotate [[(count :article) :article_count]] :debug? true)
-
+``` clojure
 (select category :annotate [[(count :article) :article_count]] :debug? true)
 ["select ceshi_category.name, ceshi_category.sort_order, ceshi_category.id, count(ceshi_article.id) as article_count from ceshi_category INNER JOIN ceshi_article ON (ceshi_category.id = ceshi_article.category_id) group by ceshi_category.id"]
 ```
