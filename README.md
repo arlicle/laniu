@@ -7,7 +7,7 @@ It’s django model for clojure.
 A Clojure library designed to normal human that don't like SQL, well, if you don't like SQL , that part is up to you.
 
 
-PS. It's provide connection pooling by `c3p0` library
+PS. connection pooling change to hikari-cp library now.
 
 ### Leiningen/Boot
 [![Clojars Project](https://clojars.org/laniu/latest-version.svg)](https://clojars.org/laniu)
