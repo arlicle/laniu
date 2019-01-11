@@ -55,7 +55,7 @@ This setting maps database aliases, which are a way to refer to a specific datab
              :server-name   "localhost"
              :port-number   3306
              :read-only     true}})
-; the default :operation is :read_and_write
+; the default read and write
 ```
 The more detail about the database connection config is here [https://github.com/tomekw/hikari-cp](https://github.com/tomekw/hikari-cp)
 
