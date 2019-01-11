@@ -56,6 +56,7 @@ This setting maps database aliases, which are a way to refer to a specific datab
             :port-number        3306}})
 ; the default :operation is :read_and_write
 ```
+The more detail about the database connection config is here [https://github.com/tomekw/hikari-cp](https://github.com/tomekw/hikari-cp)
 
 ### define a model
 ``` clojure
@@ -553,7 +554,7 @@ Returns the aggregate values (avg, sum, count, min, max), the aggregate field wi
 
 ### run raw sql
 
-If you need a more complex form of sql, you can use `raw-query` and `raw-execute!`
+If you need a more complex form of sql, you can use `raw-query` and `raw-execute!`, the jdbc sql document at here [http://clojure-doc.org/.../java_jdbc/using_sql.html](http://clojure-doc.org/articles/ecosystem/java_jdbc/using_sql.html)
 
 `raw-query` for select
 
