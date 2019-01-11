@@ -1,9 +1,9 @@
 (ns laniu.core
-  (:import (com.mchange.v2.c3p0 ComboPooledDataSource))
   (:import java.util.Date)
   (:require [clojure.spec.alpha :as $s]
             [clojure.java.jdbc :as jdbc]
             [clojure.tools.logging :as log]
+            [hikari-cp.core :as hikari-cp]
             ))
 
 
@@ -25,16 +25,7 @@
 
 (defn connection-pool
   [spec]
-  (let [cpds (doto (ComboPooledDataSource.)
-               (.setDriverClass (:classname spec))
-               (.setJdbcUrl (str "jdbc:" (:subprotocol spec) ":" (:subname spec)))
-               (.setUser (:user spec))
-               (.setPassword (:password spec))
-               ;; expire excess connections after 30 minutes of inactivity:
-               (.setMaxIdleTimeExcessConnections (* 30 60))
-               ;; expire connections after 3 hours of inactivity:
-               (.setMaxIdleTime (* 3 60 60)))]
-    {:datasource cpds}))
+  {:datasource (hikari-cp/make-datasource spec)})
 
 
 
@@ -44,12 +35,11 @@
     (reset! *current-pooled-dbs
             (with-meta
               (reduce (fn [r [k v]]
-                        (let [p (:operation v)]
-                          (if (or (nil? p) (contains? #{:read :read_and_write} p))
-                            (swap! *db-by-action update-in [:read] conj k))
-                          (if (not= :read p)
-                            (swap! *db-by-action update-in [:write] conj k)))
-
+                        (if (:read-only v)
+                          (swap! *db-by-action update-in [:read] #(into [k] %))
+                          (swap! *db-by-action update-in [:read] conj k))
+                        (if (not (:read-only v))
+                          (swap! *db-by-action update-in [:write] conj k))
                         (assoc r k (delay (connection-pool v))))
                       {} db-settings)
               {:db_for_operation @*db-by-action}))
@@ -625,7 +615,6 @@
                                           " = " join-model-db-name "."
                                           (get-foreignkey-to-field-db-column model foreignkey-field)
                                           )])
-            (println "link-table-field:" link-table-field)
             (str join-model-db-name "." (get-foreignkey-field-db-column model foreignkey-field link-table-field)))))
       (do
         (check-model-field model k)
