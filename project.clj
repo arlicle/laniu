@@ -12,5 +12,6 @@
                  [org.clojure/java.jdbc "0.7.8"]
                  [mysql/mysql-connector-java "5.1.47"]
                  [com.mchange/c3p0 "0.9.5.2"]
+                 [hikari-cp "2.6.0"]
                  [org.clojure/tools.logging "0.4.1"]
                  ])

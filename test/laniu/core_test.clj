@@ -1,6 +1,8 @@
 (ns laniu.core-test
   (:require [clojure.test :refer :all]
-            [laniu.core :refer :all]))
+            [laniu.core :refer :all]
+            [hikari-cp.core :refer :all]
+            [clojure.java.jdbc :as jdbc]))
 
 
 (defdb

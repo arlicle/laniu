@@ -464,7 +464,7 @@
    (get-in (meta model) [:meta :db_table])))
 
 
-
+(declare get-foreignkey-field-db-column)
 (defn get-field-db-column
   [model field]
   (if-let [c (get-in model [field :db_column])]
