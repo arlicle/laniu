@@ -34,7 +34,7 @@ And I Just test mysql 5.7.20 now, It will support more database later.
              :database-name      "projectx2"
              :server-name        "localhost"
              :port-number        3306
-             :use-ssl false
+             :use-ssl            false
              }})
 ```
 
@@ -48,7 +48,7 @@ This setting maps database aliases, which are a way to refer to a specific datab
              :database-name      "projectx2"
              :server-name        "localhost"
              :port-number        3306}
-   :red-db {:adapter            "mysql"
+   :read-db {:adapter           "mysql"
             :username           "root"
             :password           "123"
             :database-name      "projectx3"
