@@ -28,36 +28,32 @@ And I Just test mysql 5.7.20 now, It will support more database later.
 
 ``` clojure
 (defdb
-  {:default {
-             :classname   "com.mysql.jdbc.Driver"
-             :subprotocol "mysql"
-             :subname     "//127.0.0.1:3306/projectx2"
-             :user        "root"
-             :password    "123"
-             :useSSL      false}})
+  {:default {:adapter            "mysql"
+             :username           "root"
+             :password           "123"
+             :database-name      "projectx2"
+             :server-name        "localhost"
+             :port-number        3306
+             :use-ssl false
+             }})
 ```
 
 ### Multiple databases
 This setting maps database aliases, which are a way to refer to a specific database throughout query, to a dictionary of settings for that specific connection. 
 ``` clojure
 (defdb
-  {:default {
-             :classname   "com.mysql.jdbc.Driver"
-             :subprotocol "mysql"
-             :subname     "//127.0.0.1:3306/projectx2"
-             :user        "root"
-             :password    "123"
-             :useSSL      false
-             :operation   :read_and_write ; :operation types: :read :write :read_and_write
-             }
-   :read-db {:classname   "com.mysql.jdbc.Driver"
-             :subprotocol "mysql"
-             :subname     "//127.0.0.1:3306/projectx3"
-             :user        "root"
-             :password    "123"
-             :useSSL      false
-             :operation   :read
-             }})
+  {:default {:adapter            "mysql"
+             :username           "root"
+             :password           "123"
+             :database-name      "projectx2"
+             :server-name        "localhost"
+             :port-number        3306}
+   :red-db {:adapter            "mysql"
+            :username           "root"
+            :password           "123"
+            :database-name      "projectx3"
+            :server-name        "localhost"
+            :port-number        3306}})
 ; the default :operation is :read_and_write
 ```
 

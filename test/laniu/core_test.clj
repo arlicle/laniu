@@ -17,9 +17,14 @@
              :database-name      "projectx2"
              :server-name        "localhost"
              :port-number        3306
-             :use-ssl false
-             }
-   })
+             :use-ssl false}
+   :red-db {:adapter            "mysql"
+            :username           "root"
+            :password           "123"
+            :database-name      "projectx3"
+            :server-name        "localhost"
+            :port-number        3306
+            :use-ssl false}})
 
 
 (select )
