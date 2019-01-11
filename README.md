@@ -6,6 +6,7 @@ It’s django model for clojure.
 
 A Clojure library designed to normal human that don't like SQL, well, if you don't like SQL , that part is up to you.
 
+I use this lib for my work everyday, so I'm the first user, I try my best to make it better everyday.
 
 PS. connection pooling change to hikari-cp library now.
 
