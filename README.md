@@ -42,18 +42,19 @@ And I Just test mysql 5.7.20 now, It will support more database later.
 This setting maps database aliases, which are a way to refer to a specific database throughout query, to a dictionary of settings for that specific connection. 
 ``` clojure
 (defdb
-  {:default {:adapter            "mysql"
-             :username           "root"
-             :password           "123"
-             :database-name      "projectx2"
-             :server-name        "localhost"
-             :port-number        3306}
-   :read-db {:adapter           "mysql"
-            :username           "root"
-            :password           "123"
-            :database-name      "projectx3"
-            :server-name        "localhost"
-            :port-number        3306}})
+  {:default {:adapter       "mysql"
+             :username      "root"
+             :password      "123"
+             :database-name "projectx2"
+             :server-name   "localhost"
+             :port-number   3306}
+   :read-db  {:adapter       "mysql"
+             :username      "root"
+             :password      "123"
+             :database-name "projectx3"
+             :server-name   "localhost"
+             :port-number   3306
+             :read-only     true}})
 ; the default :operation is :read_and_write
 ```
 The more detail about the database connection config is here [https://github.com/tomekw/hikari-cp](https://github.com/tomekw/hikari-cp)

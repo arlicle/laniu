@@ -11,30 +11,29 @@
 
 (meta @*current-pooled-dbs)
 (defdb
-  {:default {:adapter            "mysql"
-             :username           "root"
-             :password           "123"
-             :database-name      "projectx2"
-             :server-name        "localhost"
-             :port-number        3306
-             :use-ssl false}
-   :red-db {:adapter            "mysql"
-            :username           "root"
-            :password           "123"
-            :database-name      "projectx3"
-            :server-name        "localhost"
-            :port-number        3306
-            :use-ssl false}})
+  {:default {:adapter       "mysql"
+             :username      "root"
+             :password      "123"
+             :database-name "projectx2"
+             :server-name   "localhost"
+             :port-number   3306}
+   :read-db  {:adapter       "mysql"
+             :username      "root"
+             :password      "123"
+             :database-name "projectx3"
+             :server-name   "localhost"
+             :port-number   3306
+             :read-only     true}})
 
 
-(select )
+(select)
 
-(def datasource-options {:adapter            "mysql"
-                         :username           "root"
-                         :password           "123"
-                         :database-name      "projectx2"
-                         :server-name        "localhost"
-                         :port-number        3306
+(def datasource-options {:adapter       "mysql"
+                         :username      "root"
+                         :password      "123"
+                         :database-name "projectx2"
+                         :server-name   "localhost"
+                         :port-number   3306
                          })
 
 
