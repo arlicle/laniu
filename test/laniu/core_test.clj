@@ -8,6 +8,8 @@
 
 
 
+
+
 (defdb
   {:default {:adapter       "mysql"
              :username      "root"
@@ -53,6 +55,7 @@
 (jdbc/with-db-connection [conn {:datasource @datasource}]
                          (let [rows (jdbc/query conn "SELECT * from ceshi_article")]
                            (println rows)))
+
 
 
 

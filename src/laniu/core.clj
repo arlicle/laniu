@@ -87,7 +87,7 @@
   – use {:type \"foreinkey\" :model \"self\" :on-delete  :CASCADE}
   "
   [{field-type :type model :model on-delete :on-delete blank? :blank?}]
-  [])
+  [vector?])
 
 
 
@@ -325,6 +325,8 @@
                                       (case (:type v)
                                         :foreignkey
                                         (merge default {:db_column (str (name k) "_id") :to_field :id :related-key (model-name-to-key model-name)} v)
+                                        :many-to-many-field
+                                        (merge default {:db_column (str (name k) "_id") :to_field :id :related-key (model-name-to-key model-name)} v)
                                         (merge default {:db_column (name k)} v)
                                         ))
                              ) {} fields)]
@@ -359,30 +361,43 @@
   (let [
         ns-name (str (ns-name *ns*))
         [fields-configs pk] (optimi-model-fields model-name fields-configs)
-        {req-fields :req opt-fields :opt opt-fields2 :opt2 un-insert-fields :ui foreignkey-fields :fr}
+        *fields-data (atom {:un-insert-fields []})
+        _
         (reduce (fn [r [k v]]
+                  (if (not= (:type v) :many-to-many-field)
+                    (swap! *fields-data update-in [:column-fields] conj k))
                   (if (or (contains? #{:auto-field :many-to-many-field} (:type v)) (contains? v :default) (:blank? v))
-                    (-> (case (:type v)
-                          :many-to-many-field
-                          (update-in r [:ui] conj k)
-                          :foreignkey
-                          (assoc-in r [:fr k] v)
-                          r)
-                        (update-in [:opt] conj (keyword (str ns-name "." (name model-name)) (name k)))
-                        (update-in [:opt2] assoc k (:default v)))
-                    (-> (if (= :foreignkey (:type v)) (assoc-in r [:fr k] v) r)
-                        (update-in [:req] conj (keyword (str ns-name "." (name model-name)) (name k))))
-                    )
-                  ) {:req [] :opt [] :opt2 {} :ui #{} :fr {}} fields-configs)
+                    (do
+                      (case (:type v)
+                        :many-to-many-field
+                        (do
+                          (swap! *fields-data update-in [:un-insert-fields] conj k)
+                          (swap! *fields-data assoc-in [:many-to-many-fields k] k)
+                          )
+                        :foreignkey
+                        (swap! *fields-data assoc-in [:foreignkey-fields k] v)
+                        :none)
+                      (swap! *fields-data update-in [:opt-fields] conj (keyword (str ns-name "." (name model-name)) (name k)))
+                      (swap! *fields-data update-in [:opt-fields2] assoc k (:default v)))
+                    (do
+                      (if (= :foreignkey (:type v))
+                        (swap! *fields-data assoc-in [:foreignkey-fields k] v))
+                      (swap! *fields-data update-in [:req-fields] conj (keyword (str ns-name "." (name model-name)) (name k)))
+                      )))
+                {} fields-configs)
+
+        {:keys [req-fields opt-fields opt-fields2 un-insert-fields foreignkey-fields many-to-many-fields column-fields]} @*fields-data
         models-fields (with-meta fields-configs
                                  {
-                                  :fields               (set (keys fields-configs))
+                                  :fields               (set column-fields)
                                   :un-insert-fields     un-insert-fields
                                   :default-value-fields opt-fields2
                                   :name                 (name model-name)
                                   :ns-name              ns-name
                                   :primary-key          pk
-                                  :meta                 (merge {:db_table (create-model-db-name model-name ns-name)} meta-configs)})]
+                                  :meta                 (merge {:db_table (create-model-db-name model-name ns-name)} meta-configs)})
+        ]
+
     `(do
        ~@(for [[k field-opts] fields-configs]
            `($s/def
@@ -407,7 +422,7 @@
                     :foreignkey
                     (foreignkey-spec field-opts)
 
-                    (:many-to-many-field :m2m-field)
+                    :many-to-many-field
                     (many-to-many-field-spec field-opts)
 
                     :auto-field
@@ -419,6 +434,7 @@
                     (do
                       (println "(:type field-opts):" (:type field-opts))
                       ['string?])))))
+
 
        ($s/def ~(keyword ns-name (name model-name))
          ($s/keys :req-un ~req-fields
@@ -826,12 +842,14 @@
       (keyword (str skey ".id")))))
 
 
+
 (defn get-aggregate-alias
   "fix the count *"
   [k]
   (if (not= '* k)
     (str "__" (name k))
     ))
+
 
 
 (defn get-aggregate-fields-query
@@ -858,12 +876,14 @@
        fields))
 
 
+
 (defn parse-group-by
   [model fields]
   (mapv
     (fn [k]
       (get-field-db-name model k))
     fields))
+
 
 
 (defn get-annotate-query
