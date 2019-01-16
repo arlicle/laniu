@@ -50,6 +50,11 @@
 
 
 
+(defn get-model-name
+  [model]
+  (:name (meta model)))
+
+
 (defn- auto-field-spec
   "
   An int-field that automatically increments according to available IDs.
@@ -325,7 +330,7 @@
   "index more db field data from field type
   a primary key field will automatically be added to model if you don’t specify otherwise.
   "
-  [model-name fields]
+  [model-name model_db_name fields]
   (let [*primary_key (atom nil)
         default {}
         new-fields (reduce (fn [r [k v]]
@@ -336,7 +341,7 @@
                                         :foreignkey
                                         (merge default {:db_column (str (name k) "_id") :to_field :id :related-key (model-name-to-key model-name)} v)
                                         :many-to-many-field
-                                        (merge default {:db_column (str (name k) "_id") :through-db "" :to_field :id :related-key (model-name-to-key model-name)} v)
+                                        (merge default {:through-db (str model_db_name "_" (name k)) :through-field-columns [(model-name-to-key (str model-name "_id")) (model-name-to-key (str (:model v) "_id"))] :related-key (model-name-to-key model-name)} v)
                                         (merge default {:db_column (name k)} v)
                                         ))
                              ) {} fields)]
@@ -360,7 +365,9 @@
   [model-name & {fields-configs :fields meta-configs :meta methods-config :methods :or {meta-configs {} methods-config {}}}]
   (let [
         ns-name (str (ns-name *ns*))
-        [fields-configs pk] (optimi-model-fields model-name fields-configs)
+        meta-configs (merge {:db_table (create-model-db-name ns-name model-name)} meta-configs)
+        model_db_name (:db_table meta-configs)
+        [fields-configs pk] (optimi-model-fields model-name model_db_name fields-configs)
         *fields-data (atom {:un-insert-fields []})
         _
         (reduce (fn [r [k v]]
@@ -396,7 +403,7 @@
                                   :name                 (name model-name)
                                   :ns-name              ns-name
                                   :primary-key          pk
-                                  :meta                 (merge {:db_table (create-model-db-name ns-name model-name)} meta-configs)})
+                                  :meta                 meta-configs})
         ]
 
     `(do
@@ -511,9 +518,7 @@
 
 
 
-(defn get-model-name
-  [model]
-  (:name (meta model)))
+
 
 
 
@@ -631,7 +636,7 @@
       [:many-to-many]
       :else
       (do
-        (println "jjjj" (get-model-db-name f-model))
+        (println "unknown " (get-model-db-name f-model))
         [:field (get-model-db-name f-model)])
       )))
 
@@ -712,10 +717,15 @@
       (let [[many-to-many-db [many-from_id many-to_id] be-model be-many-db be-many-primary-db]
             (get-many-to-many-through-data model foreignkey-field)
             join-table (get-many-to-many-table model *tables from foreignkey-field)
-            model-primary-db (get-field-db-column model (get-model-primary-key model))]
+            model-primary-db (get-field-db-column model (get-model-primary-key model))
+            a (get-in @*tables [:tables many-to-many-db]) c (inc (:count @*tables))
+            alias (if (not (nil? a)) (str "T" c))
+            ]
+        (swap! *tables update-in [:tables many-to-many-db] assoc foreignkey-field nil)
+        (swap! *tables assoc :count c)
         (swap! *join-table conj
-               [[from many-to-many-db nil nil true] (str model-db-table "." model-primary-db
-                                                         " = " many-to-many-db "." many-from_id)]
+               [[from many-to-many-db nil alias true] (str model-db-table "." model-primary-db
+                                                           " = " (if alias alias many-to-many-db) "." many-from_id)]
                [join-table (str many-to-many-db "." many-to_id
                                 " = " be-many-db "." be-many-primary-db)])
         (str be-many-db "." (get-field-db-column be-model link-table-field)))
@@ -726,10 +736,15 @@
             [many-to-many-db [many-to_id many-from_id] be-model be-many-db be-many-primary-db]
             (get-be-many-to-many-through-data model foreignkey-field)
             join-table (get-be-many-to-many-table be-model *tables from foreignkey-field)
-            model-primary-db (get-field-db-column model (get-model-primary-key model))]
+            model-primary-db (get-field-db-column model (get-model-primary-key model))
+            a (get-in @*tables [:tables many-to-many-db]) c (inc (:count @*tables))
+            alias (if (not (nil? a)) (str "T" c))
+            ]
+        (swap! *tables update-in [:tables many-to-many-db] assoc foreignkey-field nil)
+        (swap! *tables assoc :count c)
         (swap! *join-table conj
-               [[from many-to-many-db nil nil true] (str model-db-table "." model-primary-db
-                                                         " = " many-to-many-db "." many-from_id)]
+               [[from many-to-many-db nil alias true] (str model-db-table "." model-primary-db
+                                                           " = " (if alias alias many-to-many-db) "." many-from_id)]
                [join-table (str many-to-many-db "." many-to_id
                                 " = " be-many-db "." be-many-primary-db)])
         (str be-many-db "." (get-field-db-column be-model link-table-field)))
