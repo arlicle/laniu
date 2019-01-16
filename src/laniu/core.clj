@@ -311,6 +311,16 @@
   (keyword (clojure.string/lower-case model-name)))
 
 
+
+(defn create-model-db-name
+  "create a default model db name"
+  [ns-name model-name]
+  (clojure.string/lower-case
+    (clojure.string/replace
+      (str (clojure.string/join "_" (let [[a & b :as c] (clojure.string/split ns-name #"\.")]
+                                      (if (seq b) b [a]))) "_" model-name) #"\-" "_")))
+
+
 (defn optimi-model-fields
   "index more db field data from field type
   a primary key field will automatically be added to model if you don’t specify otherwise.
@@ -326,23 +336,13 @@
                                         :foreignkey
                                         (merge default {:db_column (str (name k) "_id") :to_field :id :related-key (model-name-to-key model-name)} v)
                                         :many-to-many-field
-                                        (merge default {:db_column (str (name k) "_id") :to_field :id :related-key (model-name-to-key model-name)} v)
+                                        (merge default {:db_column (str (name k) "_id") :through-db "" :to_field :id :related-key (model-name-to-key model-name)} v)
                                         (merge default {:db_column (name k)} v)
                                         ))
                              ) {} fields)]
     (if (not @*primary_key)
       [(assoc new-fields :id {:type :auto-field :primary-key? true :db_column "id"}) :id]
       [new-fields @*primary_key])))
-
-
-
-(defn create-model-db-name
-  "create a default model db name"
-  [model-name ns-name]
-  (clojure.string/lower-case
-    (clojure.string/replace
-      (str (clojure.string/join "_" (let [[a & b :as c] (clojure.string/split ns-name #"\.")]
-                                      (if (seq b) b [a]))) "_" model-name) #"\-" "_")))
 
 
 
@@ -372,7 +372,7 @@
                         :many-to-many-field
                         (do
                           (swap! *fields-data update-in [:un-insert-fields] conj k)
-                          (swap! *fields-data assoc-in [:many-to-many-fields k] k)
+                          (swap! *fields-data assoc-in [:many-to-many-fields k] v)
                           )
                         :foreignkey
                         (swap! *fields-data assoc-in [:foreignkey-fields k] v)
@@ -390,12 +390,13 @@
         models-fields (with-meta fields-configs
                                  {
                                   :fields               (set column-fields)
+                                  :many2many-fields     (set (keys many-to-many-fields))
                                   :un-insert-fields     un-insert-fields
                                   :default-value-fields opt-fields2
                                   :name                 (name model-name)
                                   :ns-name              ns-name
                                   :primary-key          pk
-                                  :meta                 (merge {:db_table (create-model-db-name model-name ns-name)} meta-configs)})
+                                  :meta                 (merge {:db_table (create-model-db-name ns-name model-name)} meta-configs)})
         ]
 
     `(do
@@ -449,7 +450,16 @@
               (vary-meta ~(symbol (:model v)) assoc-in [:one2many ~(:related-key v)]
                          {:model ~(symbol model-name)
                           :field ~k
-                          }))))))
+                          })))
+
+       ~@(for [[k v] many-to-many-fields]
+           `(def ~(symbol (:model v))
+              (vary-meta ~(symbol (:model v)) assoc-in [:many2many ~(:related-key v)]
+                         {:model ~(symbol model-name)
+                          :field ~k
+                          }))
+           )
+       )))
 
 
 
@@ -520,13 +530,17 @@
   "
   ([model field] (check-model-field model field nil))
   ([model field field-type]
-   (if (and (not (contains? (get-model-fields model) field)) (not (get-in (meta model) [:one2many field])))
-     (throw (Exception. (str "field " field " is not in model " (get-model-name model)))))
-   (if (and field-type (not= (get-in model [field :type]) field-type))
-     (throw (Exception. (str "only :foreignkey field can related search. "
-                             field " is not a foreignkey field. "
-                             field "'s type is " (or (get-in model [field :type]) "nil")
-                             ))))
+   (let [m-data (meta model)]
+     (if (and (not (contains? (get-model-fields model) field))
+              (not (contains? (get-in m-data [:many2many-fields]) field))
+              (not (get-in m-data [:one2many field]))
+              (not (get-in m-data [:many2many field])))
+       (throw (Exception. (str "field " field " is not in model " (get-model-name model)))))
+     (if (and field-type (not= (get-in model [field :type]) field-type))
+       (throw (Exception. (str "only :foreignkey field can related search. "
+                               field " is not a foreignkey field. "
+                               field "'s type is " (or (get-in model [field :type]) "nil")
+                               )))))
    true))
 
 
@@ -593,32 +607,143 @@
   1 如果foreignkey 到:self，那么拿自身即可
   2 正常foreignkey,直接从 foreignkey model中获取
   3 如果是被foreignkey, 那么从one2many，中获取model，
+
+  返回foreignkey类型 和对应的字段db
   "
   [model foreignkey-field]
   (let [f-model (get-in model [foreignkey-field :model])
-        m-data (get-in (meta model) [:one2many foreignkey-field :model])]
+        m-data (meta model)
+        one2many-model (get-in m-data [:one2many foreignkey-field :model])
+        be-many2many-model (get-in m-data [:many2many foreignkey-field :model])
+        ]
     (cond
       ; foreignkey to self
       (= f-model :self)
       [:self (get-model-db-name model)]
       ; one2many
-      (and (nil? f-model) m-data)
-      [:one2many (get-model-db-name m-data)]
+      (and (nil? f-model) one2many-model)
+      [:one2many (get-model-db-name one2many-model)]
+      ; be many2many field
+      (and (nil? f-model) be-many2many-model)
+      [:be-many2many (get-model-db-name be-many2many-model)]
+      ; current many2many field
+      (= :many-to-many-field (get-in model [foreignkey-field :type]))
+      [:many-to-many]
       :else
-      [:field (get-model-db-name f-model)]
+      (do
+        (println "jjjj" (get-model-db-name f-model))
+        [:field (get-model-db-name f-model)])
       )))
+
+
+
+(defn get-many-to-many-table
+  [model *tables from foreignkey-field]
+  (let [tables @*tables
+        be-many-model (get-in model [foreignkey-field :model]) be-many-model-db (get-model-db-name be-many-model)
+        a (get-in tables [:tables be-many-model-db]) c (inc (:count tables))]
+    (cond
+      (nil? a)
+      (do
+        (swap! *tables update-in [:tables be-many-model-db] assoc foreignkey-field nil)
+        (swap! *tables assoc :count c)
+        [from be-many-model-db foreignkey-field nil true])
+      (not (contains? a foreignkey-field))
+      (do
+        (swap! *tables update-in [:tables be-many-model-db] assoc foreignkey-field (str "T" c))
+        (swap! *tables assoc :count c)
+        [from be-many-model-db foreignkey-field (str "T" c) true])
+      :else
+      [nil be-many-model-db foreignkey-field (get-in tables [:tables be-many-model-db foreignkey-field]) true])
+    ))
+
+
+
+(defn get-be-many-to-many-table
+  [be-many-model *tables from foreignkey-field]
+  (let [tables @*tables
+        be-many-model-db (get-model-db-name be-many-model)
+        a (get-in tables [:tables be-many-model-db]) c (inc (:count tables))]
+    (cond
+      (nil? a)
+      (do
+        (swap! *tables update-in [:tables be-many-model-db] assoc foreignkey-field nil)
+        (swap! *tables assoc :count c)
+        [from be-many-model-db foreignkey-field nil true])
+      (not (contains? a foreignkey-field))
+      (do
+        (swap! *tables update-in [:tables be-many-model-db] assoc foreignkey-field (str "T" c))
+        (swap! *tables assoc :count c)
+        [from be-many-model-db foreignkey-field (str "T" c) true])
+      :else
+      [nil be-many-model-db foreignkey-field (get-in tables [:tables be-many-model-db foreignkey-field]) true])
+    ))
+
+
+
+(defn get-many-to-many-through-data
+  [model field]
+  (let [be-many-model (get-in model [field :model])]
+    [(get-in model [field :through-db]) (get-in model [field :through-field-columns])
+     be-many-model (get-model-db-name be-many-model) (get-field-db-column be-many-model (get (meta be-many-model) :primary-key))]))
+
+
+
+(defn get-be-many-to-many-through-data
+  [model field]
+  (let [m-data (meta model)
+        be-many-model (get-in m-data [:many2many field :model])
+        be-field (get-in m-data [:many2many field :field])
+        be-many-to-many-field-data (get be-many-model be-field)
+        ]
+    [(get-in be-many-model [be-field :through-db]) (get-in be-many-model [be-field :through-field-columns])
+     be-many-model (get-model-db-name be-many-model) (get-field-db-column be-many-model (get (meta be-many-model) :primary-key))]))
 
 
 
 (defn get-field-db-name
   [model k & {:keys [*join-table *tables from]}]
   (let [k_name (name k) model-db-table (get-model-db-name model)
-        [_ foreingnkey-field-name link-table-field] (re-find #"([\w-]+)\.([\w-]+)" k_name)]
-    (if (and foreingnkey-field-name link-table-field *join-table *tables)
-      (let [foreignkey-field (keyword foreingnkey-field-name)
-            link-table-field (keyword link-table-field)
-            _ (check-model-field model foreignkey-field)
+        [_ foreingnkey-field-name link-table-field] (re-find #"([\w-]+)\.([\w-]+)" k_name)
+        foreignkey-field (keyword foreingnkey-field-name)
+        link-table-field (keyword link-table-field)]
+
+    (cond
+      ; many-to-many-field
+      (and foreignkey-field (= :many-to-many-field (get-in model [foreignkey-field :type])))
+      (let [[many-to-many-db [many-from_id many-to_id] be-model be-many-db be-many-primary-db]
+            (get-many-to-many-through-data model foreignkey-field)
+            join-table (get-many-to-many-table model *tables from foreignkey-field)
+            model-primary-db (get-field-db-column model (get-model-primary-key model))]
+        (swap! *join-table conj
+               [[from many-to-many-db nil nil true] (str model-db-table "." model-primary-db
+                                     " = " many-to-many-db "." many-from_id
+                                     )]
+               [join-table (str many-to-many-db "." many-to_id
+                                " = " be-many-db "." be-many-primary-db)])
+        (str be-many-db "." (get-field-db-column be-model link-table-field)))
+
+      ; be many-to-many-field
+      (and foreignkey-field (get-in (meta model) [:many2many foreignkey-field]))
+      (let [                                                ;be-model (get-in (meta model) [:many2many foreignkey-field :model])
+            [many-to-many-db [many-to_id many-from_id] be-model be-many-db be-many-primary-db]
+            (get-be-many-to-many-through-data model foreignkey-field)
+            join-table (get-be-many-to-many-table be-model *tables from foreignkey-field)
+            model-primary-db (get-field-db-column model (get-model-primary-key model))]
+
+        (swap! *join-table conj
+               [[from many-to-many-db nil nil true] (str model-db-table "." model-primary-db
+                                                         " = " many-to-many-db "." many-from_id
+                                                         )]
+               [join-table (str many-to-many-db "." many-to_id
+                                " = " be-many-db "." be-many-primary-db)])
+        (str be-many-db "." (get-field-db-column be-model link-table-field)))
+
+      ; foreignkey
+      (and foreignkey-field link-table-field *join-table *tables)
+      (let [_ (check-model-field model foreignkey-field)
             [r-type join-model-db-name] (get-foreignkey-model-db-name model foreignkey-field)
+            _ (println "r-type:" r-type " join-model-db-name:" join-model-db-name)
             join-table (get-foreignkey-table model *tables from foreignkey-field join-model-db-name)
             ; 处理数据库别名问题
             join-model-db-name (if-let [table-alias (get join-table 3)] table-alias (get join-table 1))]
@@ -632,6 +757,7 @@
                                           (get-foreignkey-to-field-db-column model foreignkey-field)
                                           )])
             (str join-model-db-name "." (get-foreignkey-field-db-column model foreignkey-field link-table-field)))))
+      :else
       (do
         (check-model-field model k)
         (str model-db-table "." (get-field-db-column model k))))))
@@ -879,10 +1005,10 @@
 
 (defn parse-group-by
   [model fields]
-  (mapv
-    (fn [k]
-      (get-field-db-name model k))
-    fields))
+  (let [ff (mapv (fn [k] (get-field-db-name model k)) fields)]
+    (if (seq ff)
+      (clojure.string/join "," ff)
+      )))
 
 
 
