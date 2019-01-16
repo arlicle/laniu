@@ -715,14 +715,14 @@
             model-primary-db (get-field-db-column model (get-model-primary-key model))]
         (swap! *join-table conj
                [[from many-to-many-db nil nil true] (str model-db-table "." model-primary-db
-                                     " = " many-to-many-db "." many-from_id)]
+                                                         " = " many-to-many-db "." many-from_id)]
                [join-table (str many-to-many-db "." many-to_id
                                 " = " be-many-db "." be-many-primary-db)])
         (str be-many-db "." (get-field-db-column be-model link-table-field)))
 
       ; be many-to-many-field
       (and foreignkey-field (get-in (meta model) [:many2many foreignkey-field]))
-      (let [                                                ;be-model (get-in (meta model) [:many2many foreignkey-field :model])
+      (let [;be-model (get-in (meta model) [:many2many foreignkey-field :model])
             [many-to-many-db [many-to_id many-from_id] be-model be-many-db be-many-primary-db]
             (get-be-many-to-many-through-data model foreignkey-field)
             join-table (get-be-many-to-many-table be-model *tables from foreignkey-field)
