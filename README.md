@@ -497,7 +497,7 @@ ceshi_author | CREATE TABLE `ceshi_author` (
                    :pages     {:type :int-field}
                    :price     {:type :float-field :default 0}
                    :rating    {:type :tiny-int-field :choices [[-1 "unrate"] [0 "0 star"] [1 "1 star"] [2 "2 star"] [3 "3 star"] [4 "4 star"] [5 "5 star"]]}
-                   :authors   {:type :many-to-many-field :model Author}
+                   :authors   {:type :many-to-many-field :model Author :through-db "ceshi_book_authors" :through-field-columns ["book_id" "author_id"]}
                    :publisher {:type :foreignkey :model Publisher :related-name :book}
                    :pubdate   {:type :int-field}}
           :meta {:db_table "ceshi_book"})

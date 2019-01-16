@@ -694,7 +694,6 @@
   (let [m-data (meta model)
         be-many-model (get-in m-data [:many2many field :model])
         be-field (get-in m-data [:many2many field :field])
-        be-many-to-many-field-data (get be-many-model be-field)
         ]
     [(get-in be-many-model [be-field :through-db]) (get-in be-many-model [be-field :through-field-columns])
      be-many-model (get-model-db-name be-many-model) (get-field-db-column be-many-model (get (meta be-many-model) :primary-key))]))
@@ -707,7 +706,6 @@
         [_ foreingnkey-field-name link-table-field] (re-find #"([\w-]+)\.([\w-]+)" k_name)
         foreignkey-field (keyword foreingnkey-field-name)
         link-table-field (keyword link-table-field)]
-
     (cond
       ; many-to-many-field
       (and foreignkey-field (= :many-to-many-field (get-in model [foreignkey-field :type])))
@@ -717,8 +715,7 @@
             model-primary-db (get-field-db-column model (get-model-primary-key model))]
         (swap! *join-table conj
                [[from many-to-many-db nil nil true] (str model-db-table "." model-primary-db
-                                     " = " many-to-many-db "." many-from_id
-                                     )]
+                                     " = " many-to-many-db "." many-from_id)]
                [join-table (str many-to-many-db "." many-to_id
                                 " = " be-many-db "." be-many-primary-db)])
         (str be-many-db "." (get-field-db-column be-model link-table-field)))
@@ -730,11 +727,9 @@
             (get-be-many-to-many-through-data model foreignkey-field)
             join-table (get-be-many-to-many-table be-model *tables from foreignkey-field)
             model-primary-db (get-field-db-column model (get-model-primary-key model))]
-
         (swap! *join-table conj
                [[from many-to-many-db nil nil true] (str model-db-table "." model-primary-db
-                                                         " = " many-to-many-db "." many-from_id
-                                                         )]
+                                                         " = " many-to-many-db "." many-from_id)]
                [join-table (str many-to-many-db "." many-to_id
                                 " = " be-many-db "." be-many-primary-db)])
         (str be-many-db "." (get-field-db-column be-model link-table-field)))
@@ -743,7 +738,6 @@
       (and foreignkey-field link-table-field *join-table *tables)
       (let [_ (check-model-field model foreignkey-field)
             [r-type join-model-db-name] (get-foreignkey-model-db-name model foreignkey-field)
-            _ (println "r-type:" r-type " join-model-db-name:" join-model-db-name)
             join-table (get-foreignkey-table model *tables from foreignkey-field join-model-db-name)
             ; 处理数据库别名问题
             join-model-db-name (if-let [table-alias (get join-table 3)] table-alias (get join-table 1))]
@@ -1022,7 +1016,7 @@
          (cond
            (list? item)
            (let [[op key] item]
-             (str op "(" (get-field-db-name model (get-annotate-key key) :*join-table *join-table :*tables *tables :from :annotate) ")")
+             (str op "(" (get-field-db-name model (get-annotate-key key) :*join-table *join-table :*tables *tables :from :annotate) ") as " op "__" (name key))
              )
            (and (vector? item) (list? (first item)) (keyword? (second item)))
            (let [[[op key] alias] item]
