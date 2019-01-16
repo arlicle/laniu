@@ -1,4 +1,4 @@
-(defproject laniu "0.1.6.7-SNAPSHOT"
+(defproject laniu "0.1.6.8-SNAPSHOT"
   :description "Laniu can help you rapid development and clean.
 
   It’s django model for clojure. \n\n
