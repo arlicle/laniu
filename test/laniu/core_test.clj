@@ -31,6 +31,9 @@
 
 
 (select Book :where [:authors.name "Chris Zheng"] :debug? true)
+(select Author :where [:book.name "Living Clojure"] :debug? true)
+(select Author :annotate [(count :book)] :debug? true)
+(select Book :annotate [(count :authors)] :debug? true)
 
 
 (defdb

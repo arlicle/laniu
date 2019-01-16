@@ -526,6 +526,19 @@ ceshi_book_authors | CREATE TABLE `ceshi_book_authors` (
   CONSTRAINT `ceshi_book_authors_book_id_8f05f3f8_fk_ceshi_book_id` FOREIGN KEY (`book_id`) REFERENCES `ceshi_book` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8
 
+
+(select Book :where [:authors.name "Chris Zheng"] :debug? true)
+["select ceshi_book.pubdate, ceshi_book.publisher_id, ceshi_book.name, ceshi_book.pages, ceshi_book.id, ceshi_book.price, ceshi_book.rating from ceshi_book INNER JOIN ceshi_book_authors ON (ceshi_book.id = ceshi_book_authors.book_id) INNER JOIN ceshi_author ON (ceshi_book_authors.author_id = ceshi_author.id) where ceshi_author.name= ?" "Chris Zheng"]
+
+(select Author :where [:book.name "Living Clojure"] :debug? true)
+["select ceshi_author.age, ceshi_author.name, ceshi_author.id from ceshi_author INNER JOIN ceshi_book_authors ON (ceshi_author.id = ceshi_book_authors.author_id) INNER JOIN ceshi_book ON (ceshi_book_authors.book_id = ceshi_book.id) where ceshi_book.name= ?" "Living Clojure"]
+
+; many to many annotate
+(select Author :annotate [(count :book)] :debug? true)
+["select ceshi_author.age, ceshi_author.name, ceshi_author.id, count(ceshi_book.id) as count__book from ceshi_author LEFT JOIN ceshi_book_authors ON (ceshi_author.id = ceshi_book_authors.author_id) LEFT JOIN ceshi_book ON (ceshi_book_authors.book_id = ceshi_book.id) group by ceshi_author.id"]
+
+(select Book :annotate [(count :authors)] :debug? true)
+["select ceshi_book.pubdate, ceshi_book.publisher_id, ceshi_book.name, ceshi_book.pages, ceshi_book.id, ceshi_book.price, ceshi_book.rating, count(ceshi_author.id) as count__authors from ceshi_book LEFT JOIN ceshi_book_authors ON (ceshi_book.id = ceshi_book_authors.book_id) LEFT JOIN ceshi_author ON (ceshi_book_authors.author_id = ceshi_author.id) group by ceshi_book.id"]
 ```
 
 
