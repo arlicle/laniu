@@ -127,7 +127,6 @@ ceshi_tree | CREATE TABLE `ceshi_tree` (
   KEY `ceshi_tree_parent_id_c2f9831f_fk_ceshi_tree_id` (`parent_id`),
   CONSTRAINT `ceshi_tree_parent_id_c2f9831f_fk_ceshi_tree_id` FOREIGN KEY (`parent_id`) REFERENCES `ceshi_tree` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8
-
 ```
 
 when you define a model , It's automatic create the data spec.
@@ -469,6 +468,67 @@ with `not`, `not` only can contains one collection. (not [:id 1 :headline "xxx"]
 
 ```
 
+### select many-to-many-field
+``` clojure
+(defmodel Publisher
+          :fields {:name {:type :char-field :max-length 60}}
+          :meta {:db_table "ceshi_publisher"})
+
+ceshi_publisher | CREATE TABLE `ceshi_publisher` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `name` varchar(300) NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8
+
+(defmodel Author
+          :fields {:name {:type :char-field :max-length 100}
+                   :age {:type :int-field}}
+          :meta {:db_table "ceshi_author"})
+
+ceshi_author | CREATE TABLE `ceshi_author` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `name` varchar(100) NOT NULL,
+  `age` int(11) NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8
+
+(defmodel Book
+          :fields {:name      {:type :char-field :max-length 60}
+                   :pages     {:type :int-field}
+                   :price     {:type :float-field :default 0}
+                   :rating    {:type :tiny-int-field :choices [[-1 "unrate"] [0 "0 star"] [1 "1 star"] [2 "2 star"] [3 "3 star"] [4 "4 star"] [5 "5 star"]]}
+                   :authors   {:type :many-to-many-field :model Author}
+                   :publisher {:type :foreignkey :model Publisher :related-name :book}
+                   :pubdate   {:type :int-field}}
+          :meta {:db_table "ceshi_book"})
+
+ceshi_book | CREATE TABLE `ceshi_book` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `name` varchar(300) NOT NULL,
+  `pages` int(11) NOT NULL,
+  `price` decimal(10,2) NOT NULL,
+  `rating` double NOT NULL,
+  `pubdate` int(11) NOT NULL,
+  `publisher_id` int(11) NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `ceshi_book_publisher_id_7564e663_fk_ceshi_publisher_id` (`publisher_id`),
+  CONSTRAINT `ceshi_book_publisher_id_7564e663_fk_ceshi_publisher_id` FOREIGN KEY (`publisher_id`) REFERENCES `ceshi_publisher` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8
+
+ceshi_book_authors | CREATE TABLE `ceshi_book_authors` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `book_id` int(11) NOT NULL,
+  `author_id` int(11) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `ceshi_book_authors_book_id_author_id_66920651_uniq` (`book_id`,`author_id`),
+  KEY `ceshi_book_authors_author_id_86478fd9_fk_ceshi_author_id` (`author_id`),
+  CONSTRAINT `ceshi_book_authors_author_id_86478fd9_fk_ceshi_author_id` FOREIGN KEY (`author_id`) REFERENCES `ceshi_author` (`id`),
+  CONSTRAINT `ceshi_book_authors_book_id_8f05f3f8_fk_ceshi_book_id` FOREIGN KEY (`book_id`) REFERENCES `ceshi_book` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8
+
+```
+
+
 ### select with function
 
 ``` clojure
@@ -577,7 +637,6 @@ If you need a more complex form of sql, you can use `raw-query` and `raw-execute
 ```
 
 ## To do list
-#### ManyToManyField
 #### Document
 #### Create table
 #### Migration
