@@ -39,6 +39,11 @@
                    :pubdate   {:type :int-field}}
           :meta {:db_table "ceshi_book"})
 
+
+(select Book :fields [:name [:publisher.name :pub_name]]
+        :where [:publisher.name "ccccJJJ"]
+        :debug? true)
+
 Book
 
 
