@@ -1074,9 +1074,8 @@
       (map (fn [{:keys [generated_key]}] generated_key) result))))
 
 
-
-(defmacro update!
-  [model & {values :values where-condition :where debug? :debug? clean-data? :clean-data? :or {debug? false clean-data? true}}]
+(defn update!*
+  [model {values :values where-condition :where clean-data? :clean-data? :or {clean-data? true}}]
   (let [model (get-model model)
         model-db-name (get-model-db-name model)
         *tables (atom {:tables {model-db-name {}} :count 1})
@@ -1085,22 +1084,34 @@
         where-query-str (if where-query-str (str "where " where-query-str))
         where-join-query-str (clojure.string/join " " (get-join-table-query where-join-table))
         fields-str (if fields-str (str " set " fields-str))
-        sql (str "update " model-db-name " "
-                 where-join-query-str " "
+        sql (str "update " model-db-name
+                 (if (and where-join-query-str (not= "" where-join-query-str))
+                   (str " " where-join-query-str))
                  fields-str " " where-query-str)
         query-vec (-> [sql]
                       (into fields-values)
                       (into (filter #(not (nil? %)) values)))]
+    query-vec))
+
+(def update!*-memoize (memoize update!*))
+
+(defmacro update!
+  [model & {debug? :debug? :as all}]
+  (let [t1 (System/nanoTime)
+        query-vec (update!*-memoize model all)
+        t2 (System/nanoTime)]
+    (println "time:" (- t2 t1))
     (when debug?
       (prn query-vec))
     `(first (jdbc/execute! (db-connection) ~query-vec))))
 
 
 
-(defmacro select
-  [model & {fields-list :fields aggregate-fields :aggregate annotate-fields :annotate where-condition :where debug? :debug? group-by :group-by only-sql? :only-sql?}]
+(defn select*
+  [model {fields-list :fields aggregate-fields :aggregate annotate-fields :annotate where-condition :where group-by :group-by}]
   (let [model (get-model model)
         model-db-name (get-model-db-name model)
+        _ (println "model-db-name:" model-db-name)
         *tables (atom {:tables {model-db-name {}} :count 1})
         [where-query-str values where-join-table] (get-where-query model where-condition *tables)
         [fields-strs field-join-table] (if aggregate-fields
@@ -1119,10 +1130,18 @@
                    (str " where " where-query-str))
                  (when group-str
                    (str " group by " (clojure.string/join ", " group-str))
-                   )
-                 )
-        query-vec (into [sql] (filter #(not (nil? %)) values))
+                   ))
         ]
+    (into [sql] (filter #(not (nil? %)) values))))
+
+(def select*-memoize (memoize select*))
+
+(defmacro select
+  [model & {:keys [debug? only-sql?] :as all}]
+  (let [t1 (System/nanoTime)
+        query-vec (select*-memoize model all)
+        t2 (System/nanoTime)]
+    (println "time:" (- t2 t1))
     (when debug?
       (prn query-vec))
     (if only-sql?
@@ -1131,21 +1150,34 @@
 
 
 
-(defmacro delete!
-  [model & {where-condition :where debug? :debug?}]
+(defn delete!*
+  [model {where-condition :where}]
   (let [model (get-model model)
         model-db-name (get-model-db-name model)
         *tables (atom {:tables {model-db-name {}} :count 1})
         [where-query-str values where-join-table] (get-where-query model where-condition *tables)
         where-query-str (if where-query-str (str "WHERE " where-query-str))
         where-join-query-strs (get-join-table-query where-join-table)
-        sql (str "DELETE " model-db-name " FROM " (get-model-db-name model) " "
-                 (clojure.string/join " " where-join-query-strs) " "
-                 where-query-str)
-        query-vec (into [sql] values)]
+        sql (str "DELETE " model-db-name " FROM " (get-model-db-name model)
+                 (if (seq where-join-query-strs)
+                   (str " " (clojure.string/join " " where-join-query-strs)))
+                 (if where-query-str
+                   (str " " where-query-str)))]
+    (into [sql] values)))
+
+(def delete!*-memoize (memoize delete!*))
+
+(defmacro delete!
+  [model & {:keys [debug? only-sql?] :as all}]
+  (let [t1 (System/nanoTime)
+        query-vec (delete!*-memoize model all)
+        t2 (System/nanoTime)]
+    (println "time:" (- t2 t1))
     (when debug?
       (prn query-vec))
-    `(first (jdbc/execute! (db-connection) ~query-vec))))
+    (if only-sql?
+      query-vec
+      `(first (jdbc/execute! (db-connection) ~query-vec)))))
 
 
 
