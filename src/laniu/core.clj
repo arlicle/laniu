@@ -499,10 +499,7 @@
         (if-let [to-field (get-in f-model [f-field :to_field])]
           (if (keyword? to-field)
             (get-foreignkey-field-db-column f-model f-field to-field)
-            to-field)
-          )
-        ))
-    ))
+            to-field))))))
 
 
 
@@ -515,9 +512,6 @@
 (defn get-model-default-fields
   [model]
   (:default-value-fields (meta model)))
-
-
-
 
 
 
@@ -874,8 +868,7 @@
 (defn check-where-func
   [op]
   (if (not (contains? #{'or 'and 'not} op))
-    (throw (Exception. (str "() must first of function 'or'/'and'/'not', " op " is not valid.")))
-    )
+    (throw (Exception. (str "() must first of function 'or'/'and'/'not', " op " is not valid."))))
   true)
 
 
@@ -947,6 +940,14 @@
         ))))
 
 
+(defn infix-alias
+  [k]
+  (let [alias (name k)]
+    (if (re-seq #"\-" alias)
+      (clojure.string/replace alias #"-" "_")
+      alias)))
+
+
 
 (defn get-select-fields-query
   [model fields *tables]
@@ -958,7 +959,8 @@
                  (get-field-db-name model k :*join-table *join-table :*tables *tables :from :fields)
                  ; 一种字段是有中括号，表示有别名
                  (let [[k0 k1] k]
-                   (str (get-field-db-name model k0 :*join-table *join-table :*tables *tables :from :fields) " as " (name k1))
+                   ; 如果别名中有1就进行报错
+                   (str (get-field-db-name model k0 :*join-table *join-table :*tables *tables :from :fields) " as " (infix-alias k1))
                    )))
              fields)
        @*join-table])
@@ -993,9 +995,7 @@
            (let [[as-k op k] (if (vector? item)
                                ; 如果需要用到别名
                                (cons (str " as " (name (last item))) (first item))
-                               (cons (str " as " (first item) (get-aggregate-alias (second item))) item)
-                               )
-
+                               (cons (str " as " (first item) (get-aggregate-alias (second item))) item))
                  k2 (cond (keyword? k)
                           (get-field-db-name model k)
                           (= '* k)
@@ -1098,7 +1098,7 @@
 
 
 (defmacro select
-  [model & {fields-list :fields aggregate-fields :aggregate annotate-fields :annotate where-condition :where debug? :debug? group-by :group-by}]
+  [model & {fields-list :fields aggregate-fields :aggregate annotate-fields :annotate where-condition :where debug? :debug? group-by :group-by only-sql? :only-sql?}]
   (let [model (get-model model)
         model-db-name (get-model-db-name model)
         *tables (atom {:tables {model-db-name {}} :count 1})
@@ -1125,7 +1125,9 @@
         ]
     (when debug?
       (prn query-vec))
-    `(jdbc/query (db-connection) ~query-vec)))
+    (if only-sql?
+      query-vec
+      `(jdbc/query (db-connection) ~query-vec))))
 
 
 
