@@ -36,3 +36,9 @@
           right_sql ["select ceshi_publisher.name, ceshi_publisher.id from ceshi_publisher"]]
       (is (= sql right_sql)))))
 
+
+(deftest simple-update!-test
+  (testing "简单的update测试"
+    (let [sql (update! Book :values {:name "aaa"} :where [:id 1] :only-sql? true)
+          right_sql ["update ceshi_book set ceshi_book.name=? where ceshi_book.id= ?" "aaa" 1]]
+      (is (= sql right_sql)))))
