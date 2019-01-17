@@ -1096,11 +1096,13 @@
 (def update!*-memoize (memoize update!*))
 
 (defmacro update!
-  [model & {debug? :debug? :as all}]
+  [model & {:keys [debug? only-sql?] :as all}]
   (let [query-vec (update!*-memoize model all)]
     (when debug?
       (prn query-vec))
-    `(first (jdbc/execute! (db-connection) ~query-vec))))
+    (if only-sql?
+      query-vec
+      `(first (jdbc/execute! (db-connection) ~query-vec)))))
 
 
 
