@@ -1097,10 +1097,7 @@
 
 (defmacro update!
   [model & {debug? :debug? :as all}]
-  (let [t1 (System/nanoTime)
-        query-vec (update!*-memoize model all)
-        t2 (System/nanoTime)]
-    (println "time:" (- t2 t1))
+  (let [query-vec (update!*-memoize model all)]
     (when debug?
       (prn query-vec))
     `(first (jdbc/execute! (db-connection) ~query-vec))))
@@ -1111,7 +1108,6 @@
   [model {fields-list :fields aggregate-fields :aggregate annotate-fields :annotate where-condition :where group-by :group-by}]
   (let [model (get-model model)
         model-db-name (get-model-db-name model)
-        _ (println "model-db-name:" model-db-name)
         *tables (atom {:tables {model-db-name {}} :count 1})
         [where-query-str values where-join-table] (get-where-query model where-condition *tables)
         [fields-strs field-join-table] (if aggregate-fields
@@ -1138,10 +1134,7 @@
 
 (defmacro select
   [model & {:keys [debug? only-sql?] :as all}]
-  (let [t1 (System/nanoTime)
-        query-vec (select*-memoize model all)
-        t2 (System/nanoTime)]
-    (println "time:" (- t2 t1))
+  (let [query-vec (select*-memoize model all)]
     (when debug?
       (prn query-vec))
     (if only-sql?
@@ -1169,10 +1162,7 @@
 
 (defmacro delete!
   [model & {:keys [debug? only-sql?] :as all}]
-  (let [t1 (System/nanoTime)
-        query-vec (delete!*-memoize model all)
-        t2 (System/nanoTime)]
-    (println "time:" (- t2 t1))
+  (let [query-vec (delete!*-memoize model all)]
     (when debug?
       (prn query-vec))
     (if only-sql?
