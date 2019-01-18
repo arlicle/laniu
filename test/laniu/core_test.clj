@@ -49,3 +49,6 @@
     (let [sql (delete! Book :where [:id 1] :only-sql? true)
           right_sql ["DELETE ceshi_book FROM ceshi_book WHERE ceshi_book.id= ?" 1]]
       (is (= sql right_sql)))))
+
+
+
