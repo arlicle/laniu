@@ -42,3 +42,10 @@
     (let [sql (update! Book :values {:name "aaa"} :where [:id 1] :only-sql? true)
           right_sql ["update ceshi_book set ceshi_book.name=? where ceshi_book.id= ?" "aaa" 1]]
       (is (= sql right_sql)))))
+
+
+(deftest simple-delete!-test
+  (testing "简单的delete!测试"
+    (let [sql (delete! Book :where [:id 1] :only-sql? true)
+          right_sql ["DELETE ceshi_book FROM ceshi_book WHERE ceshi_book.id= ?" 1]]
+      (is (= sql right_sql)))))

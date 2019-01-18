@@ -19,14 +19,12 @@
         (if (= operation :read)
           ; 需要把读改为随机读取
           @(get pooled-db (get-in (meta pooled-db) [:db_for_operation :read 0]))
-          @(get pooled-db (get-in (meta pooled-db) [:db_for_operation :write 0]))
-          )))))
+          @(get pooled-db (get-in (meta pooled-db) [:db_for_operation :write 0])))))))
 
 
 (defn connection-pool
   [spec]
   {:datasource (hikari-cp/make-datasource spec)})
-
 
 
 (defn defdb
@@ -766,19 +764,20 @@
         (str model-db-table "." (get-field-db-column model k))))))
 
 
+
 (defn clean-insert-model-data
-  [model data]
-  (reduce (fn [r [k v]]
-            (cond
-              (= :many-to-many-field (get-in model [k :type]))
-              (assoc-in r [1 k] (if (fn? v) (v) v))
-              (and (get-in model [k :primary-key?]) (not v))
-              r
-              :else
-              (assoc-in r [0 (get-field-db-name model k)] (if (fn? v) (v) v))))
-          [{} {}]
-          (select-keys (merge (get-model-default-fields model) data)
-                       (get-model-fields model))))
+  [model data remove-pk?]
+  (let [pk (get-model-primary-key model) fields (get-model-fields model) fields (if remove-pk? (clojure.set/difference fields #{pk}) fields)]
+    (reduce (fn [r [k v]]
+              (cond
+                (= :many-to-many-field (get-in model [k :type]))
+                (assoc-in r [1 k] (if (fn? v) (v) v))
+                (and (get-in model [k :primary-key?]) (not v))
+                r
+                :else
+                (assoc-in r [0 (get-field-db-name model k)] (if (fn? v) (v) v))))
+            [{} {}]
+            (select-keys (merge (get-model-default-fields model) data) fields))))
 
 
 
@@ -981,8 +980,7 @@
   "fix the count *"
   [k]
   (if (not= '* k)
-    (str "__" (name k))
-    ))
+    (str "__" (name k))))
 
 
 
@@ -1013,16 +1011,14 @@
   [model fields]
   (let [ff (mapv (fn [k] (get-field-db-name model k)) fields)]
     (if (seq ff)
-      (clojure.string/join "," ff)
-      )))
+      (clojure.string/join "," ff))))
 
 
 
 (defn get-annotate-query
   [model fields *tables]
   (let [*join-table (atom [])
-        group-by [(get-field-db-name model (get-model-primary-key model))]
-        ]
+        group-by [(get-field-db-name model (get-model-primary-key model))]]
     [(mapv
        (fn [item]
          (cond
@@ -1037,41 +1033,73 @@
        fields)
      @*join-table group-by]))
 
+(comment
+  (defn insert!
+    "insert the data into the database."
+    [model & {:keys [values debug? only-sql? clean-data? remove-pk?] :or {debug? false clean-data? true remove-pk? true}}]
+    (let [[model-name db-table-name] (get-model&table-name model)]
+      (if ($s/valid? (keyword (str (ns-name *ns*)) model-name) values)
+        (let [[insert-data m2m-data]
+              (if clean-data?
+                (clean-insert-model-data model values remove-pk?)
+                values)]
+          (when debug?
+            (prn "insert data to db " (keyword db-table-name) " : " insert-data))
+          (if only-sql?
+            insert-data
+            (let [[{:keys [generated_key]}] (jdbc/insert! (db-connection) (keyword db-table-name) insert-data)]
+              generated_key)
+            ))
+        ($s/explain-data (keyword (str (ns-name *ns*)) model-name) values)))))
 
 
-(defn insert!
+
+(defn insert!*
   "insert the data into the database."
-  [model & {:keys [values debug? clean-data?] :or {debug? false clean-data? true}}]
-  (let [[model-name db-table-name] (get-model&table-name model)]
+  [model {:keys [values clean-data? remove-pk?] :or {remove-pk? true clean-data? true}}]
+  (let [model (get-model model)
+        [model-name db-table-name] (get-model&table-name model)]
     (if ($s/valid? (keyword (str (ns-name *ns*)) model-name) values)
-      (let [[insert-data mdata]
+      (let [[insert-data m2m-data]
             (if clean-data?
-              (clean-insert-model-data model values)
-              values)]
-        (when debug?
-          (prn "insert data to db " (keyword db-table-name) " : " insert-data))
-        (let [[{:keys [generated_key]}] (jdbc/insert! (db-connection) (keyword db-table-name) insert-data)]
-          generated_key))
+              (clean-insert-model-data model values remove-pk?)
+              [values])]
+        [insert-data db-table-name])
       ($s/explain-data (keyword (str (ns-name *ns*)) model-name) values))))
+
+
+
+(defmacro insert!
+  "insert the data into the database."
+  [model & {:keys [debug? only-sql? clean-data?] :or {debug? false clean-data? true remove-pk? true} :as all}]
+  (let [[insert-data db-table-name] (insert!* model all)]
+    (when debug?
+      (prn "insert data to db " (keyword db-table-name) " : " insert-data))
+    (if only-sql?
+      insert-data
+      `(let [[{pk# :generated_key}] (jdbc/insert! (db-connection) ~(keyword db-table-name) ~insert-data)]
+         pk#))))
 
 
 
 (defn insert-multi!
   "一次插入多条数据"
-  [model & {:keys [values debug? clean-data?] :or {debug? false clean-data? true}}]
+  [model & {:keys [values debug? clean-data? remove-pk?] :or {debug? false clean-data? true remove-pk? true}}]
   (let [[model-name db-table-name] (get-model&table-name model)
         model-key (keyword (str (ns-name *ns*)) model-name)
         new-items (if clean-data?
-                    (map-indexed (fn [idx item]
-                                   (if ($s/valid? model-key item)
-                                     (first (clean-insert-model-data model item))
-                                     (throw (Exception. (str "error-data in row : " idx " , " item)))
-                                     )) values)
+                    (map-indexed
+                      (fn [idx item]
+                        (if ($s/valid? model-key item)
+                          (first (clean-insert-model-data model item remove-pk?))
+                          (throw (Exception. (str "error-data in row : " idx " , " item)))
+                          )) values)
                     values)]
     (when debug?
       (prn "db:" (keyword db-table-name) " items:" new-items))
     (let [result (jdbc/insert-multi! (db-connection) (keyword db-table-name) new-items)]
       (map (fn [{:keys [generated_key]}] generated_key) result))))
+
 
 
 (defn update!*
@@ -1106,6 +1134,23 @@
 
 
 
+(defmacro update-or-insert!
+  "Updates columns or inserts a new row in the specified table"
+  [model & {:keys [debug? only-sql? values where clean-data?] :or {clean-data? true} :as all}]
+  (let [query-vec (update!*-memoize model all)
+        connection (db-connection)
+        [insert-data db-table-name] (insert!* model all)
+        db-table (keyword db-table-name)
+        ]
+    (jdbc/with-db-transaction [connection connection]
+                              (let [[result] (jdbc/execute! connection query-vec)]
+                                (if (zero? result)
+                                  (let [[result] (jdbc/insert! connection db-table insert-data)]
+                                    result)
+                                  {:update-count result})))))
+
+
+
 (defn select*
   [model {fields-list :fields aggregate-fields :aggregate annotate-fields :annotate where-condition :where group-by :group-by}]
   (let [model (get-model model)
@@ -1127,9 +1172,7 @@
                  (when (and where-query-str (not= "" where-query-str))
                    (str " where " where-query-str))
                  (when group-str
-                   (str " group by " (clojure.string/join ", " group-str))
-                   ))
-        ]
+                   (str " group by " (clojure.string/join ", " group-str))))]
     (into [sql] (filter #(not (nil? %)) values))))
 
 (def select*-memoize (memoize select*))
