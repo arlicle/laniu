@@ -51,3 +51,9 @@
       (is (= sql right_sql)))))
 
 
+
+(deftest simple-insert!-test
+  (testing "insert!测试"
+    (let [sql (insert! Publisher :values {:name "hello"} :only-sql? true)
+          right_sql {"ceshi_publisher.name" "hello"}]
+      (is (= sql right_sql)))))
