@@ -51,4 +51,3 @@
       (is (= sql right_sql)))))
 
 
-

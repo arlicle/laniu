@@ -290,6 +290,12 @@ When you define a model, the defmodel will auto define a data spec, when you ins
 
 ```
 
+### update or insert
+``` clojure
+(update-or-insert! Publisher :values {:name "Yunnan"} :where [:id 1])
+```
+
+
 ### select data
 ``` clojure
 
