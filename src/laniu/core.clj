@@ -463,8 +463,7 @@
                          {:model ~(symbol model-name)
                           :field ~k
                           }))
-           )
-       )))
+           ))))
 
 
 
@@ -513,7 +512,6 @@
 
 
 
-
 (defn get-model&table-name
   [model]
   [(get-model-name model) (get-model-db-name model)])
@@ -556,7 +554,6 @@
         ; 如果没有，那么就从one2many中拿
         (if-let [f-model (get-in m-data [:one2many foreignkey-field :model])]
           (get-field-db-column f-model field))))))
-
 
 
 
@@ -627,8 +624,7 @@
       (= :many-to-many-field (get-in model [foreignkey-field :type]))
       [:many-to-many]
       :else
-      [:field (get-model-db-name f-model)]
-      )))
+      [:field (get-model-db-name f-model)])))
 
 
 
@@ -864,6 +860,7 @@
     (throw (Exception. (str "Not find model " model-symbol)))))
 
 
+
 (defn check-where-func
   [op]
   (if (not (contains? #{'or 'and 'not} op))
@@ -935,8 +932,7 @@
                                     fields " has " (count fields) " ."))))
           [(str "not (" (clojure.string/join " " fields) ")") vals @*join-table]
           )
-        [(clojure.string/join (str " " op " ") fields) vals @*join-table]
-        ))))
+        [(clojure.string/join (str " " op " ") fields) vals @*join-table]))))
 
 
 (defn infix-alias
@@ -1032,25 +1028,6 @@
              )))
        fields)
      @*join-table group-by]))
-
-(comment
-  (defn insert!
-    "insert the data into the database."
-    [model & {:keys [values debug? only-sql? clean-data? remove-pk?] :or {debug? false clean-data? true remove-pk? true}}]
-    (let [[model-name db-table-name] (get-model&table-name model)]
-      (if ($s/valid? (keyword (str (ns-name *ns*)) model-name) values)
-        (let [[insert-data m2m-data]
-              (if clean-data?
-                (clean-insert-model-data model values remove-pk?)
-                values)]
-          (when debug?
-            (prn "insert data to db " (keyword db-table-name) " : " insert-data))
-          (if only-sql?
-            insert-data
-            (let [[{:keys [generated_key]}] (jdbc/insert! (db-connection) (keyword db-table-name) insert-data)]
-              generated_key)
-            ))
-        ($s/explain-data (keyword (str (ns-name *ns*)) model-name) values)))))
 
 
 
