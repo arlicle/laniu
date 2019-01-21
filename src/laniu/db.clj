@@ -59,28 +59,34 @@
     "AUTO_INCREMENT"))
 
 
+(defn fields-to-db-info
+  [model]
 
-(map
-  (fn
-    [item]
-    [
-
-     (field-to-column item)
-     (get-field-type item)
-     (null-field item)
-     (auto-increment item)
-     ]
-
-    ) Publisher)
+  (reduce
+    (fn
+      [result item]
+      (str result
+        (reduce
+          (fn [r s]
+            (if s
+              (str r " " s)
+              r))
+          [
+           (field-to-column item)
+           (get-field-type item)
+           (null-field item)
+           (auto-increment item)
+           ]) ",\n")
+      ) "" model))
 
 
 
 (defn create-table
   [model]
   (let [model-db-name (get-model-db-name model)]
-    (str "CREATE TABLE `ceshi_reporter` ("
-
+    (str "CREATE TABLE `ceshi_reporter` (\n"
+         (fields-to-db-info model)
          ") ENGINE=InnoDB DEFAULT CHARSET=utf8"
-         )
+         )))
 
-    ))
+(create-table Publisher)
