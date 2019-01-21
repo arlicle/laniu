@@ -473,7 +473,7 @@
 
 
 
-(defn- get-model-db-name
+(defn get-model-db-name
   ([model1 model2]
    (if (= model1 :self)
      (get-model-db-name model2)
