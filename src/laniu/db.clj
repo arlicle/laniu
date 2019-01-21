@@ -59,27 +59,35 @@
     "AUTO_INCREMENT"))
 
 
+(defn primary-key-sql
+  [model]
+  (str "PRIMARY KEY (`" (get-field-db-column model (get-model-primary-key model)) "`)"))
+
+(primary-key-sql Publisher)
+
 (defn fields-to-db-info
   [model]
+  (->
+    (mapv
+      (fn
+        [item]
+        (let [key* (atom [])]
+          (reduce
+            (fn [r s]
+              (if s
+                (str r " " s)
+                r))
+            [
+             (field-to-column item)
+             (get-field-type item)
+             (null-field item)
+             (auto-increment item)]))
+        ) model)
+    (conj (primary-key-sql model))))
 
-  (reduce
-    (fn
-      [result item]
-      (str result
-        (reduce
-          (fn [r s]
-            (if s
-              (str r " " s)
-              r))
-          [
-           (field-to-column item)
-           (get-field-type item)
-           (null-field item)
-           (auto-increment item)
-           ]) ",\n")
-      ) "" model))
+(partial add-primary-key model)
 
-
+(prn (fields-to-db-info Publisher))
 
 (defn create-table
   [model]
