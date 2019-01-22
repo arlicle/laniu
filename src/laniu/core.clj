@@ -344,7 +344,10 @@
                                         ))
                              ) {} fields)]
     (if (not @*primary_key)
-      [(assoc new-fields :id {:type :auto-field :primary-key? true :db_column "id"}) :id]
+      [(->> new-fields
+            (into [])
+            (cons [:id {:type :auto-field :primary-key? true :db_column "id"}])
+            (into {})) :id]
       [new-fields @*primary_key])))
 
 

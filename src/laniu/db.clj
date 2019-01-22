@@ -93,8 +93,8 @@
   [model]
   (let [model-db-name (get-model-db-name model)]
     (str "CREATE TABLE `ceshi_reporter` (\n"
-         (fields-to-db-info model)
-         ") ENGINE=InnoDB DEFAULT CHARSET=utf8"
+         (clojure.string/join ",\n" (fields-to-db-info model))
+         "\n) ENGINE=InnoDB DEFAULT CHARSET=utf8"
          )))
 
 (create-table Publisher)
