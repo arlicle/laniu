@@ -22,6 +22,8 @@
           @(get pooled-db (get-in (meta pooled-db) [:db_for_operation :write 0])))))))
 
 
+
+
 (defn connection-pool
   [spec]
   {:datasource (hikari-cp/make-datasource spec)})
@@ -29,18 +31,25 @@
 
 (defn defdb
   [db-settings]
-  (let [*db-by-action (atom {:read [] :write []}) *config]
+  (let [*db-by-action (atom {:read [] :write []}) *engine (atom {:read nil :write nil}) *charset (atom nil)]
     (reset! *current-pooled-dbs
             (with-meta
               (reduce (fn [r [k v]]
                         (if (:read-only v)
-                          (swap! *db-by-action update-in [:read] #(into [k] %))
-                          (swap! *db-by-action update-in [:read] conj k))
-                        (if (not (:read-only v))
-                          (swap! *db-by-action update-in [:write] conj k))
-                        (assoc r k (delay (connection-pool v))))
+                          (do
+                            (swap! *db-by-action update-in [:read] #(into [k] %))
+                            (swap! *engine assoc-in [:read] (get v :engine "InnoDB")))
+                          (do
+                            (swap! *db-by-action update-in [:read] conj k)
+                            (if (not (get-in @*engine [:read]))
+                              (swap! *engine assoc-in [:read] (get v :engine "InnoDB")))))
+                        (when (not (:read-only v))
+                          (reset! *charset (get v :charset "utf8"))
+                          (swap! *db-by-action update-in [:write] conj k)
+                          (swap! *engine assoc-in [:write] (get v :engine "InnoDB")))
+                        (assoc r k (delay (connection-pool (dissoc v :engine :charset)))))
                       {} db-settings)
-              {:db_for_operation @*db-by-action :engine (:engine @*config)}))
+              {:db_for_operation @*db-by-action :engine @*engine :charset @*charset}))
     (if (empty? (:read @*db-by-action))
       (log/warn "Warning: No read database config."))
     (if (empty? (:write @*db-by-action))

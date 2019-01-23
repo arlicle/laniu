@@ -11,6 +11,7 @@
              :server-name   "localhost"
              :port-number   3306
              :engine        "InnoDB"
+             :charset        "utf8"
              :use-ssl       false}})
 
 
@@ -19,6 +20,10 @@
           :meta {:db_table "ceshi_publisher"})
 
 (select Publisher)
+
+
+
+(meta @*current-pooled-dbs)
 
 
 (defmodel Author

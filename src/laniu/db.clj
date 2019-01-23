@@ -1,6 +1,16 @@
 (ns laniu.db
   (:require [laniu.core :refer :all]))
 
+(defn get-db-engine
+  ([] (get-db-engine :write))
+  ([action]
+   (get-in (meta @*current-pooled-dbs) [:engine action] "InnoDB")))
+
+
+
+(defn get-db-charset
+  []
+  (get (meta @*current-pooled-dbs) :charset "utf8"))
 
 
 (defn field-to-column
@@ -56,7 +66,7 @@
   [model]
   (str "PRIMARY KEY (`" (get-field-db-column model (get-model-primary-key model)) "`)"))
 
-(primary-key-sql Publisher)
+
 
 (defn fields-to-db-info
   [model]
@@ -85,8 +95,6 @@
   (let [model-db-name (get-model-db-name model)]
     (str "CREATE TABLE `" model-db-name "` (\n"
          (clojure.string/join ",\n" (fields-to-db-info model))
-         "\n) ENGINE=InnoDB DEFAULT CHARSET=utf8")))
+         "\n) ENGINE=" (get-db-engine) " DEFAULT CHARSET=" (get-db-charset))))
 
-(create-table Publisher)
-(create-table Category)
-(create-table article)
+
