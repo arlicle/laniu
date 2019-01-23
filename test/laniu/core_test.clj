@@ -2,9 +2,23 @@
   (:require [clojure.test :refer :all]
             [laniu.core :refer :all]))
 
+
+(defdb
+  {:default {:adapter       "mysql"
+             :username      "root"
+             :password      "123"
+             :database-name "projectx2"
+             :server-name   "localhost"
+             :port-number   3306
+             :engine        "InnoDB"
+             :use-ssl       false}})
+
+
 (defmodel Publisher
           :fields {:name {:type :char-field :max-length 60}}
           :meta {:db_table "ceshi_publisher"})
+
+(select Publisher)
 
 
 (defmodel Author

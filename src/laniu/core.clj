@@ -29,7 +29,7 @@
 
 (defn defdb
   [db-settings]
-  (let [*db-by-action (atom {:read [] :write []})]
+  (let [*db-by-action (atom {:read [] :write []}) *config]
     (reset! *current-pooled-dbs
             (with-meta
               (reduce (fn [r [k v]]
@@ -40,7 +40,7 @@
                           (swap! *db-by-action update-in [:write] conj k))
                         (assoc r k (delay (connection-pool v))))
                       {} db-settings)
-              {:db_for_operation @*db-by-action}))
+              {:db_for_operation @*db-by-action :engine (:engine @*config)}))
     (if (empty? (:read @*db-by-action))
       (log/warn "Warning: No read database config."))
     (if (empty? (:write @*db-by-action))
