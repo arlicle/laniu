@@ -1,6 +1,7 @@
 (ns laniu.core-test
   (:require [clojure.test :refer :all]
-            [laniu.core :refer :all]))
+            [laniu.core :refer :all]
+            [laniu.db :refer :all]))
 
 
 (defdb
@@ -13,6 +14,14 @@
              :engine        "InnoDB"
              :charset        "utf8"
              :use-ssl       false}})
+
+
+
+(defmodel Publisher2
+          :fields {:name {:type :char-field :max-length 60}}
+          :meta {:db_table "ceshi_publisher2"})
+
+(create-table Publisher2 :debug? true)
 
 
 (defmodel Publisher

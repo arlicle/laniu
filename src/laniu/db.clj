@@ -1,5 +1,6 @@
 (ns laniu.db
-  (:require [laniu.core :refer :all]))
+  (:require [laniu.core :refer :all]
+            [clojure.java.jdbc :as jdbc]))
 
 (defn get-db-engine
   ([] (get-db-engine :write))
@@ -91,10 +92,16 @@
 
 
 (defn create-table
-  [model]
-  (let [model-db-name (get-model-db-name model)]
-    (str "CREATE TABLE `" model-db-name "` (\n"
-         (clojure.string/join ",\n" (fields-to-db-info model))
-         "\n) ENGINE=" (get-db-engine) " DEFAULT CHARSET=" (get-db-charset))))
+  "create table by model"
+  [model & {:keys [debug? only-sql?]}]
+  (let [model-db-name (get-model-db-name model)
+        sql (str "CREATE TABLE `" model-db-name "` (\n"
+                 (clojure.string/join ",\n" (fields-to-db-info model))
+                 "\n) ENGINE=" (get-db-engine) " DEFAULT CHARSET=" (get-db-charset))]
+    (if debug?
+      (prn sql))
+    (if only-sql?
+      sql
+      (jdbc/execute! (db-connection) [sql]))))
 
 
