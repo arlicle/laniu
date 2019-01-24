@@ -12,7 +12,7 @@
              :server-name   "localhost"
              :port-number   3306
              :engine        "InnoDB"
-             :charset        "utf8"
+             :charset       "utf8"
              :use-ssl       false}})
 
 
@@ -40,10 +40,18 @@
 (meta @*current-pooled-dbs)
 
 
+(defmodel Publisher
+          :fields {:name {:type :char-field :max-length 60}}
+          :meta {:db_table "ceshi_publisher"})
+
+(create-table Publisher :only-sql? true)
+
 (defmodel Author
           :fields {:name {:type :char-field :max-length 100}
                    :age  {:type :int-field}}
           :meta {:db_table "ceshi_author"})
+
+(create-table Author :only-sql? true)
 
 (defmodel Book
           :fields {:name      {:type :char-field :max-length 60}
@@ -54,6 +62,8 @@
                    :publisher {:type :foreignkey :model Publisher :related-name :book}
                    :pubdate   {:type :int-field}}
           :meta {:db_table "ceshi_book"})
+
+(create-table Book :only-sql? true)
 
 
 (deftest defmodel-test-1

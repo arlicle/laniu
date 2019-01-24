@@ -32,15 +32,27 @@
 
 (defn get-field-type
   [[k v]]
-  (str
-    (case (:type v)
-      (:auto-field :int-field :foreignkey)
-      "int(11)"
 
-      :char-field
-      (str "varchar(" (get v :max-length) ")")
+  (case (:type v)
+    (:auto-field :int-field :foreignkey)
+    "int(11)"
 
-      :else)))
+    :float-field
+    "double"
+
+    :tiny-int-field
+    (let [max-length (get v :max-length 4)
+          max-length (if (> max-length 4) 4 max-length)
+          ]
+      (str "tinyint(" max-length ")"))
+
+    :char-field
+    (str "varchar(" (get v :max-length) ")")
+
+    :many-to-many-field
+    nil
+
+    :else))
 
 
 (defn null-field
@@ -75,17 +87,17 @@
     (mapv
       (fn
         [item]
-        (let [key* (atom [])]
-          (reduce
-            (fn [r s]
-              (if s
-                (str r " " s)
-                r))
-            [
-             (field-to-column model item)
-             (get-field-type item)
-             (null-field item)
-             (auto-increment item)]))
+        (let [key* (atom []) field-type (get-field-type item)]
+          (if field-type
+            (reduce
+              (fn [r s]
+                (if s
+                  (str r " " s)
+                  r))
+              [(field-to-column model item)
+               field-type
+               (null-field item)
+               (auto-increment item)])))
         ) model)
     (conj (primary-key-sql model))))
 
@@ -96,12 +108,38 @@
   [model & {:keys [debug? only-sql?]}]
   (let [model-db-name (get-model-db-name model)
         sql (str "CREATE TABLE `" model-db-name "` (\n"
-                 (clojure.string/join ",\n" (fields-to-db-info model))
+                 (clojure.string/join ",\n" (filter (comp not nil?) (fields-to-db-info model)))
                  "\n) ENGINE=" (get-db-engine) " DEFAULT CHARSET=" (get-db-charset))]
     (if debug?
       (println sql))
     (if only-sql?
       sql
       (jdbc/execute! (db-connection) [sql]))))
+
+
+(defmodel Publisher
+          :fields {:name {:type :char-field :max-length 60}}
+          :meta {:db_table "ceshi_publisher"})
+
+(create-table Publisher :only-sql? true)
+
+(defmodel Author
+          :fields {:name {:type :char-field :max-length 100}
+                   :age  {:type :int-field}}
+          :meta {:db_table "ceshi_author"})
+
+(create-table Author :only-sql? true)
+
+(defmodel Book
+          :fields {:name      {:type :char-field :max-length 60}
+                   :pages     {:type :int-field}
+                   :price     {:type :float-field :default 0}
+                   :rating    {:type :tiny-int-field :choices [[-1 "unrate"] [0 "0 star"] [1 "1 star"] [2 "2 star"] [3 "3 star"] [4 "4 star"] [5 "5 star"]]}
+                   :authors   {:type :many-to-many-field :model Author}
+                   :publisher {:type :foreignkey :model Publisher :related-name :book}
+                   :pubdate   {:type :int-field}}
+          :meta {:db_table "ceshi_book"})
+
+(create-table Book :only-sql? true)
 
 
