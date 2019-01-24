@@ -23,6 +23,7 @@ And I Just test mysql 5.7.20 now, It will support more database later.
 
 ``` clojure
 (require '[laniu.core :refer :all])
+(require '[laniu.db :as laniu-db])
 ```
 
 ### config the database connection
@@ -57,6 +58,20 @@ This setting maps database aliases, which are a way to refer to a specific datab
              :port-number   3306
              :read-only     true}})
 ; the default read and write
+; the default database engine is InnoDB
+; the default database charset is utf8
+
+; defdb by database engine and charset
+(defdb
+  {:default {:adapter       "mysql"
+             :username      "root"
+             :password      "123"
+             :database-name "projectx2"
+             :server-name   "localhost"
+             :port-number   3306
+             :engine        "InnoDB"
+             :charset        "utf8"
+             :use-ssl       false}})
 ```
 The more detail about the database connection config is here [https://github.com/tomekw/hikari-cp](https://github.com/tomekw/hikari-cp)
 
@@ -68,7 +83,10 @@ The more detail about the database connection config is here [https://github.com
           :meta {:db_table "ceshi_reporter"})
 
 ; the database sql, the model will auto add a primary key :id
-ceshi_reporter | CREATE TABLE `ceshi_reporter` (
+; create table
+
+(laniu-db/create-table reporter :debug? true)
+CREATE TABLE `ceshi_reporter` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `full_name` varchar(70) NOT NULL,
   PRIMARY KEY (`id`)
@@ -79,7 +97,8 @@ ceshi_reporter | CREATE TABLE `ceshi_reporter` (
                    :sort_order {:type :int-field :default 0}}
           :meta {:db_table "ceshi_category"})
 
-ceshi_category | CREATE TABLE `ceshi_category` (
+(laniu-db/create-table category :debug? true)
+CREATE TABLE `ceshi_category` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `name` varchar(30) NOT NULL,
   `sort_order` int(11) NOT NULL,

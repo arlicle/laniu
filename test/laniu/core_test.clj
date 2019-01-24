@@ -16,12 +16,17 @@
              :use-ssl       false}})
 
 
+(defmodel reporter
+          :fields {:full_name {:type :char-field :max-length 70}}
+          :meta {:db_table "ceshi_reporter"})
 
-(defmodel Publisher2
+(create-table reporter :debug? true)
+
+(defmodel Publisher
           :fields {:name {:type :char-field :max-length 60}}
-          :meta {:db_table "ceshi_publisher2"})
+          :meta {:db_table "ceshi_publisher"})
 
-(create-table Publisher2 :debug? true)
+(create-table Publisher2 :only-sql? true)
 
 
 (defmodel Publisher
