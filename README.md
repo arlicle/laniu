@@ -115,7 +115,7 @@ CREATE TABLE `ceshi_category` (
                    :created    {:type :int-field :default #(quot (System/currentTimeMillis) 1000)}}
           :meta {:db_table "ceshi_article"})
 
-ceshi_article | CREATE TABLE `ceshi_article` (
+CREATE TABLE `ceshi_article` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `headline` varchar(200) NOT NULL,
   `content` longtext NOT NULL,
@@ -137,7 +137,7 @@ ceshi_article | CREATE TABLE `ceshi_article` (
                    :sort-order {:type :int-field :default 0}
                    })
 
-ceshi_tree | CREATE TABLE `ceshi_tree` (
+CREATE TABLE `ceshi_tree` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `name` varchar(30) NOT NULL,
   `sort_order` int(11) NOT NULL,
@@ -499,7 +499,7 @@ with `not`, `not` only can contains one collection. (not [:id 1 :headline "xxx"]
           :fields {:name {:type :char-field :max-length 60}}
           :meta {:db_table "ceshi_publisher"})
 
-ceshi_publisher | CREATE TABLE `ceshi_publisher` (
+CREATE TABLE `ceshi_publisher` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `name` varchar(300) NOT NULL,
   PRIMARY KEY (`id`)
@@ -510,7 +510,7 @@ ceshi_publisher | CREATE TABLE `ceshi_publisher` (
                    :age {:type :int-field}}
           :meta {:db_table "ceshi_author"})
 
-ceshi_author | CREATE TABLE `ceshi_author` (
+CREATE TABLE `ceshi_author` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `name` varchar(100) NOT NULL,
   `age` int(11) NOT NULL,
@@ -527,7 +527,7 @@ ceshi_author | CREATE TABLE `ceshi_author` (
                    :pubdate   {:type :int-field}}
           :meta {:db_table "ceshi_book"})
 
-ceshi_book | CREATE TABLE `ceshi_book` (
+CREATE TABLE `ceshi_book` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `name` varchar(300) NOT NULL,
   `pages` int(11) NOT NULL,
@@ -540,7 +540,7 @@ ceshi_book | CREATE TABLE `ceshi_book` (
   CONSTRAINT `ceshi_book_publisher_id_7564e663_fk_ceshi_publisher_id` FOREIGN KEY (`publisher_id`) REFERENCES `ceshi_publisher` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8
 
-ceshi_book_authors | CREATE TABLE `ceshi_book_authors` (
+CREATE TABLE `ceshi_book_authors` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `book_id` int(11) NOT NULL,
   `author_id` int(11) NOT NULL,

@@ -20,7 +20,7 @@
           :fields {:full_name {:type :char-field :max-length 70}}
           :meta {:db_table "ceshi_reporter"})
 
-(create-table reporter :debug? true)
+(create-table reporter :debug? true :only-sql? true)
 
 (defmodel Publisher
           :fields {:name {:type :char-field :max-length 60}}

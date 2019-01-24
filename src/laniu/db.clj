@@ -99,7 +99,7 @@
                  (clojure.string/join ",\n" (fields-to-db-info model))
                  "\n) ENGINE=" (get-db-engine) " DEFAULT CHARSET=" (get-db-charset))]
     (if debug?
-      (prn sql))
+      (println sql))
     (if only-sql?
       sql
       (jdbc/execute! (db-connection) [sql]))))
