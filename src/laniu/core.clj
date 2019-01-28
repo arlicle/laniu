@@ -3,8 +3,7 @@
   (:require [clojure.spec.alpha :as $s]
             [clojure.java.jdbc :as jdbc]
             [clojure.tools.logging :as log]
-            [hikari-cp.core :as hikari-cp]
-            ))
+            [hikari-cp.core :as hikari-cp]))
 
 
 (defonce *current-pooled-dbs (atom nil))

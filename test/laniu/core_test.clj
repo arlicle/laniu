@@ -16,6 +16,18 @@
              :use-ssl       false}})
 
 
+(defdb
+  {:default {:adapter       "mysql"
+             :username      "root"
+             :password      "123"
+             :database-name "projectx3"
+             :server-name   "localhost"
+             :port-number   3306
+             :engine        "InnoDB"
+             :charset       "utf8"
+             :use-ssl       false}})
+
+
 (defmodel reporter
           :fields {:full_name {:type :char-field :max-length 70}}
           :meta {:db_table "ceshi_reporter"})

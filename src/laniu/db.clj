@@ -14,6 +14,7 @@
   (get (meta @*current-pooled-dbs) :charset "utf8"))
 
 
+
 (defn field-to-column
   [model [k v]]
   (str
@@ -30,8 +31,25 @@
     "`"))
 
 
+
+(defn create-many-to-many-table
+  "根据model和字段创建many-to-many的table"
+  [model field]
+  (let [table-name (get-in model [field :through-db])
+        [field1 field2] (get-in model [field :through-field-columns])
+        sql (str "CREATE TABLE `" table-name "` (\n"
+                 "`id` int(11) NOT NULL AUTO_INCREMENT,\n"
+                 "`" field1 "` int(11) NOT NULL,\n"
+                 "`" field2 "` int(11) NOT NULL,\n"
+                 "PRIMARY KEY (`id`)\n"
+                 ") ENGINE=" (get-db-engine) " DEFAULT CHARSET=" (get-db-charset)
+                 )]
+    sql))
+
+
+
 (defn get-field-type
-  [[k v]]
+  [model [k v] *many-to-many-tablle]
 
   (case (:type v)
     (:auto-field :int-field :foreignkey)
@@ -50,7 +68,9 @@
     (str "varchar(" (get v :max-length) ")")
 
     :many-to-many-field
-    nil
+    (do
+      (swap! *many-to-many-tablle conj (create-many-to-many-table model k))
+      nil)
 
     :else))
 
@@ -82,12 +102,12 @@
 
 
 (defn fields-to-db-info
-  [model]
+  [model *many-to-many-tablle]
   (->
     (mapv
       (fn
         [item]
-        (let [key* (atom []) field-type (get-field-type item)]
+        (let [field-type (get-field-type model item *many-to-many-tablle)]
           (if field-type
             (reduce
               (fn [r s]
@@ -106,40 +126,24 @@
 (defn create-table
   "create table by model"
   [model & {:keys [debug? only-sql?]}]
-  (let [model-db-name (get-model-db-name model)
+  (let [*many-to-many-tablle (atom [])
+        model-db-name (get-model-db-name model)
         sql (str "CREATE TABLE `" model-db-name "` (\n"
-                 (clojure.string/join ",\n" (filter (comp not nil?) (fields-to-db-info model)))
+                 (clojure.string/join ",\n" (filter (comp not nil?) (fields-to-db-info model *many-to-many-tablle)))
                  "\n) ENGINE=" (get-db-engine) " DEFAULT CHARSET=" (get-db-charset))]
-    (if debug?
-      (println sql))
+    (when debug?
+      (println sql)
+      (doseq [s @*many-to-many-tablle]
+        (println s)))
     (if only-sql?
-      sql
-      (jdbc/execute! (db-connection) [sql]))))
-
-
-(defmodel Publisher
-          :fields {:name {:type :char-field :max-length 60}}
-          :meta {:db_table "ceshi_publisher"})
-
-(create-table Publisher :only-sql? true)
-
-(defmodel Author
-          :fields {:name {:type :char-field :max-length 100}
-                   :age  {:type :int-field}}
-          :meta {:db_table "ceshi_author"})
-
-(create-table Author :only-sql? true)
-
-(defmodel Book
-          :fields {:name      {:type :char-field :max-length 60}
-                   :pages     {:type :int-field}
-                   :price     {:type :float-field :default 0}
-                   :rating    {:type :tiny-int-field :choices [[-1 "unrate"] [0 "0 star"] [1 "1 star"] [2 "2 star"] [3 "3 star"] [4 "4 star"] [5 "5 star"]]}
-                   :authors   {:type :many-to-many-field :model Author}
-                   :publisher {:type :foreignkey :model Publisher :related-name :book}
-                   :pubdate   {:type :int-field}}
-          :meta {:db_table "ceshi_book"})
-
-(create-table Book :only-sql? true)
+      (do
+        (cons sql @*many-to-many-tablle))
+      (let [connection (db-connection)]
+        (jdbc/with-db-transaction
+          [connection connection {:isolation :serializable}]
+          (jdbc/execute! connection sql)
+          (doseq [s @*many-to-many-tablle]
+            (jdbc/execute! connection s)))
+        ))))
 
 
