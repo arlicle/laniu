@@ -112,3 +112,191 @@
     (let [sql (insert! Publisher :values {:name "hello"} :only-sql? true)
           right_sql {"ceshi_publisher.name" "hello"}]
       (is (= sql right_sql)))))
+
+
+(defmulti Hello :type)
+
+(defmethod Hello :int-field [data] (println "hello")
+  )
+
+(defmethod Hello :default [d]
+  (println "cool")
+  (println d)
+  )
+
+(defmulti area :shape)
+(defmethod area :circle [data]
+  (println "area 1")
+  (println data)
+  )
+
+(area {:shape :circle :r 10})
+
+
+(Hello {:type :int-field :data "aaa"})
+
+(defmulti my-hello :type)
+
+(defmethod my-hello :int-field [data]
+  (println "jjj")
+  (println data)
+  )
+
+(defmethod my-hello :char-field [data]
+  (println "char-field")
+  (println data)
+  )
+
+(my-hello {:type :char-field :max-length 10})
+
+(my-hello {:type :int-field})
+
+
+(defn beget [this proto]
+  (assoc this ::prototype proto))
+
+(beget {:id 10} {:name "edison"})
+
+
+
+(defprotocol Foo
+  "Foo doc string"
+  (bar [this b] "bar doc string")
+  (baz [this] [this b] "baz doc string"))
+
+
+(deftype Bar [data] Foo
+  (bar [this param]
+    (println "111 data:" data " param:" param)
+    (println data param))
+  (baz [this]
+    (println "222")
+    (println (class this)))
+  (baz [this param]
+    (println "333 data:" data " param:" param)
+    (println param)))
+
+(deftype Aaa [] Foo
+  (bar [this param]
+    (println "999" param)
+    ))
+
+(.bar (Aaa.) "jj")
+
+(Bar. "some data")
+
+(let [b (Bar. "some data")]
+  (.bar b "param")
+  (.baz b)
+  (.baz b "baz with param"))
+
+
+(extend-protocol Foo String
+  (bar [this param] (println this param)))
+
+(bar "hello" "world")
+
+(defmulti my-hello :type)
+
+(defmethod my-hello :int-field [data]
+  (println "jjj")
+  (println data)
+  )
+
+(my-hello {:type :int-field :max-length 10})
+
+
+(defmulti nihaoa :type)
+
+(defmethod nihaoa :int [data & args]
+  (println "111" data args)
+  )
+
+(defmethod nihaoa :char [data]
+  (println "jjj")
+  (println data)
+  )
+
+(nihao {:type :char :max-length 10})
+
+(:type {:type :char :max-length 10})
+(nihaoa {:type :char :max-length 10})
+
+(nihaoa {:type :int :val "hello"})
+
+
+(defprotocol NiHaoMa
+  (baz [this data])
+  (bac [data])
+  )
+
+(deftype MyNiHao [data] NiHaoMa
+  (baz [this data]
+    (println "barz" this data))
+  (bac [data] (println "data:" data))
+  )
+
+(let [b (MyNiHao. "dd")]
+  (.baz b "eee")
+  (.bac b)
+  )
+
+(def *names (ref []))
+(dosync
+  (ref-set *names ["hello"])
+  (alter *names #(if (not-empty %) (conj % "Jza")))
+  )
+
+@*names
+
+(def session (atom {:user "Bob"}))
+(def session (atom {}))
+
+
+(defn load-content []
+  (if (:user @session)
+    (println "load content")
+    (println "Pealse login")))
+
+(load-content)
+
+(defmacro defprivate [name args & body]
+  `(defn ~(symbol name) ~args
+     (if (:user @session)
+       (do
+         ~@body)
+       (println "please login"))))
+
+
+(macroexpand-1 '(defprivate load-news [aaa] (println "this is the news")))
+
+(load-news "ddd")
+
+(defprivate foo [message] (println message))
+
+(foo "hello edison")
+
+
+
+
+(for [a [1 2 3 4 5]]
+  (do
+    (println a)
+    (println "jj"))
+  )
+
+(for [x (range 40)
+      :when (= 1 (rem x 4))]
+  x)
+
+(for [x (range 40)
+      :while (= 1 (rem x 4))]
+  x)
+
+(for [x (iterate #(+ 4 %) 0)
+      :let [z (inc x)]
+      :while (< z 40)]
+  z)
+
+(for [[x y] (partition 2 (range 20))]
+  (+ x y))

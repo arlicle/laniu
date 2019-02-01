@@ -11,7 +11,7 @@
 
 (defn get-db-charset
   []
-  (get (meta @*current-pooled-dbs) :charset "utf8"))
+  (get (meta @*current-pooled-dbs) :charset "utf8mb4"))
 
 
 
@@ -138,12 +138,10 @@
     (if only-sql?
       (do
         (cons sql @*many-to-many-tablle))
-      (let [connection (db-connection)]
+      (let [connection (db-connection)
+            sqls (into [sql] @*many-to-many-tablle)]
         (jdbc/with-db-transaction
-          [connection connection {:isolation :serializable}]
-          (jdbc/execute! connection sql)
-          (doseq [s @*many-to-many-tablle]
-            (jdbc/execute! connection s)))
+          [connection connection ]
+          (jdbc/db-do-commands connection sqls)
+          )
         ))))
-
-
