@@ -462,7 +462,7 @@
 
                     :tiny-int-field
                     (tiny-int-field-spec field-opts)
-                    
+
                     :pos-tiny-int-field
                     (pos-tiny-int-field-spec field-opts)
 
