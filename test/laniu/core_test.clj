@@ -28,6 +28,8 @@
              :use-ssl       false}})
 
 
+(create-table reporter :only-sql? true)
+
 (defmodel reporter
           :fields {:full_name {:type :char-field :max-length 70}}
           :meta {:db_table "ceshi_reporter"})

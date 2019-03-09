@@ -145,3 +145,27 @@
           (jdbc/db-do-commands connection sqls)
           )
         ))))
+
+
+
+(defn make-migrations
+  "if the models change make the migrations script"
+  [model & {:keys [debug? only-sql?]}]
+
+  )
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

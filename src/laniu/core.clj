@@ -167,6 +167,33 @@
 
 
 
+(defn- pos-int-field-spec
+  "
+  An integer. Values from 0 to 4294967295 are safe in all databases.
+  "
+  [opts]
+  (let [
+        max-value (:max-value opts)
+        min-value (:min-value opts)
+
+        max-value (if (and max-value (> max-value 0)) 0 max-value)
+        min-value (if (and min-value (< min-value 4294967295)) 4294967295 min-value)
+
+        max-value-spec (if max-value
+                         `#(<= % ~max-value))
+        min-value-spec (if min-value
+                         `#(>= % ~min-value))
+
+        choices-spec (if-let [choices (:choices opts)]
+                       (let [choices-map (into {} choices)]
+                         `#(contains? ~choices-map %)))
+        ]
+
+    (filterv identity [`int? max-value-spec min-value-spec choices-spec])
+    ))
+
+
+
 (defn- big-int-field-spec
   "
   An integer. Values from -9223372036854775808 to 9223372036854775807 are safe in all databases.
@@ -427,11 +454,18 @@
                     :int-field
                     (int-field-spec field-opts)
 
+                    :pos-int-field
+                    (pos-int-field-spec field-opts)
+
                     :float-field
                     (float-field-spec field-opts)
 
                     :tiny-int-field
                     (tiny-int-field-spec field-opts)
+                    
+                    :pos-tiny-int-field
+                    (pos-tiny-int-field-spec field-opts)
+
 
                     :text-field
                     (text-field-spec field-opts)
