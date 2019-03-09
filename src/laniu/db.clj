@@ -52,8 +52,13 @@
   [model [k v] *many-to-many-tablle]
 
   (case (:type v)
+
     (:auto-field :int-field :foreignkey)
     "int(11)"
+
+    (:pos-int-field)
+    "int(11) unsigned"
+
 
     :float-field
     "double"
@@ -63,6 +68,12 @@
           max-length (if (> max-length 4) 4 max-length)
           ]
       (str "tinyint(" max-length ")"))
+
+    (:pos-tiny-int-field)
+    (let [max-length (get v :max-length 4)
+          max-length (if (> max-length 4) 4 max-length)
+          ]
+      (str "tinyint(" max-length ") unsigned"))
 
     :char-field
     (str "varchar(" (get v :max-length) ")")
