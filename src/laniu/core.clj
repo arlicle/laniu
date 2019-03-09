@@ -496,11 +496,12 @@
          ~models-fields
          )
        ~@(for [[k v] foreignkey-fields]
-           `(def ~(symbol (:model v))
-              (vary-meta ~(symbol (:model v)) assoc-in [:one2many ~(:related-key v)]
-                         {:model ~(symbol model-name)
-                          :field ~k
-                          })))
+           (if (not= :self (:model v))
+             `(def ~(symbol (:model v))
+                (vary-meta ~(symbol (:model v)) assoc-in [:one2many ~(:related-key v)]
+                           {:model ~(symbol model-name)
+                            :field ~k
+                            }))))
 
        ~@(for [[k v] many-to-many-fields]
            `(def ~(symbol (:model v))
@@ -508,8 +509,9 @@
                          {:model ~(symbol model-name)
                           :field ~k
                           }))
-           ))))
+           )
 
+       )))
 
 
 (defn get-model-primary-key
