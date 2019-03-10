@@ -863,7 +863,9 @@
                 (and (get-in model [k :primary-key?]) (not v))
                 r
                 :else
-                (assoc-in r [0 (get-field-db-name model k)] (if (fn? v) (v) v))))
+                (assoc-in r [0 (get-field-db-name model k)] (if (or (fn? v) (and (seq? v) (#{'fn* 'fn} (first v))))
+                                                              ((eval v))
+                                                              v))))
             [{} {}]
             (select-keys (merge (get-model-default-fields model) data) fields))))
 
@@ -1152,8 +1154,6 @@
 
 
 
-
-
 (defn insert-multi!
   "一次插入多条数据"
   [model & {:keys [values debug? clean-data? remove-pk?] :or {debug? false clean-data? true remove-pk? true}}]
@@ -1299,3 +1299,15 @@
   "raw sql for insert, update, delete ..."
   [& args]
   (apply jdbc/execute! (db-connection) args))
+
+
+(defn desc-table
+  "desc table-name"
+  [model]
+  (raw-query (str "desc " (get-model-db-name model) ";")))
+
+
+(defn show-create-table
+  "show create table table-name;"
+  [model]
+  (raw-query (str "show create table " (get-model-db-name model) ";")))
