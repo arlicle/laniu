@@ -1304,17 +1304,17 @@
 (defn desc-table
   "desc table-name"
   [model]
-  (raw-query (str "desc " (get-model-db-name model))))
+  (raw-query (str "desc " (get-model-db-name @model))))
 
 
 (defn show-create-table
   "show create table table-name;"
   [model]
-  (raw-query (str "show create table " (get-model-db-name model))))
+  (raw-query (str "show create table " (get-model-db-name @model))))
 
 (defn truncate-table
   "truncate table"
   [model]
-  (raw-execute! "SET foreign_key_checks=0")
-  (raw-execute! (str "truncate " (get-model-db-name model)))
-  (raw-execute! "SET foreign_key_checks=1"))
+  (raw-execute! "SET foreign_key_checks=0;")
+  (raw-execute! (str "truncate " (get-model-db-name @model) ";"))
+  (raw-execute! "SET foreign_key_checks=1;"))
