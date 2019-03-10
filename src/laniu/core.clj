@@ -3,7 +3,8 @@
   (:require [clojure.spec.alpha :as $s]
             [clojure.java.jdbc :as jdbc]
             [clojure.tools.logging :as log]
-            [hikari-cp.core :as hikari-cp]))
+            [hikari-cp.core :as hikari-cp]
+            [cprop.core :refer [load-config]]))
 
 
 (defonce *current-pooled-dbs (atom nil))
@@ -53,6 +54,14 @@
       (log/warn "Warning: No read database config."))
     (if (empty? (:write @*db-by-action))
       (log/warn "Warning: No write database config."))))
+
+
+(if (not @*current-pooled-dbs)
+  (let [{db-conf :databases} (load-config :file "settings.edn")]
+    (if db-conf
+      (defdb db-conf))
+    (println db-conf)))
+
 
 
 
@@ -493,25 +502,61 @@
                   ))
 
        (def ~(symbol model-name)
-         ~models-fields
-         )
+         ~(atom models-fields))
+
+       ;~@(for [[k v] foreignkey-fields]
+       ;    (if (not= :self (:model v))
+       ;      `(def ~(symbol (:model v))
+       ;         (vary-meta ~(symbol (:model v)) assoc-in [:one2many ~(:related-key v)]
+       ;                    {:model ~(symbol model-name)
+       ;                     :field ~k
+       ;                     }))))
+
        ~@(for [[k v] foreignkey-fields]
            (if (not= :self (:model v))
-             `(def ~(symbol (:model v))
-                (vary-meta ~(symbol (:model v)) assoc-in [:one2many ~(:related-key v)]
+             `(reset! ~(symbol (:model v))
+                (vary-meta @~(symbol (:model v)) assoc-in [:one2many ~(:related-key v)]
                            {:model ~(symbol model-name)
                             :field ~k
                             }))))
 
+       ;~@(for [[k v] foreignkey-fields]
+       ;    (if (not= :self (:model v))
+       ;      `(alter-meta! (resolve (quote ~(:model v))) #(assoc-in % [:one2many ~(:related-key v)] {:model ~(symbol model-name) :field ~k}))))
+
        ~@(for [[k v] many-to-many-fields]
-           `(def ~(symbol (:model v))
-              (vary-meta ~(symbol (:model v)) assoc-in [:many2many ~(:related-key v)]
+           `(reset! ~(symbol (:model v))
+              (vary-meta @~(symbol (:model v)) assoc-in [:many2many ~(:related-key v)]
                          {:model ~(symbol model-name)
                           :field ~k
                           }))
            )
 
        )))
+
+;(defmodel Category
+;                ;; 咨询分类
+;                :fields {:parent {:type :foreignkey :verbose-name "上级" :model :self}
+;                         :tree_path {:type :char-field :verbose-name "分层级树" :max-length 200}
+;                         :name {:type :char-field :verbose-name "分类名称" :max-length 30}
+;                         :sort_order {:type :int-field :verbose-name "排序" :default 1}
+;                         :deleted_time {:type :pos-int-field :verbose-name "删除时间" :default 0}}
+;                :meta {:db_table "consultion_category"})
+;(meta @Category)
+;(defmodel Conversation
+;                ;; 咨询会话，每一次新咨询都会有一个新的会话
+;                :fields {:category {:type :foreignkey :verbose-name "上级" :blank? true :null? true :model Category}
+;                         ;:user {:type :foreignkey :verbose-name "咨询人" :model User}
+;                         :lawyer_last_reply_time {:type :pos-int-field :verbose-name "律师最后回复时间" :default 0}
+;                         :solve_time {:type :pos-int-field :verbose-name "解决时间" :default 0}
+;                         :lawyer_last_read_time {:type :int-field :verbose-name "律师看问题的时间" :default 1}
+;                         :user_last_read_time {:type :int-field :verbose-name "用户看问题答案的时间" :default 1}
+;                         ; 表示为评价
+;                         :rate {:type :tiny-int-field :verbose-name "用户评价" :default 0}
+;                         :created {:type :pos-int-field :verbose-name "创建时间" :default #(quot (System/currentTimeMillis) 1000)}
+;                         :last_modified {:type :pos-int-field :verbose-name "创建时间" :default #(quot (System/currentTimeMillis) 1000)}
+;                         :deleted_time {:type :pos-int-field :verbose-name "删除时间" :default 0}}
+;                :meta {:db_table "consultion_conversation"})
 
 
 (defn get-model-primary-key
@@ -1081,7 +1126,7 @@
 (defn insert!*
   "insert the data into the database."
   [model {:keys [values clean-data? remove-pk?] :or {remove-pk? true clean-data? true}}]
-  (let [model (get-model model)
+  (let [model @(get-model model)
         [model-name db-table-name] (get-model&table-name model)]
     (if ($s/valid? (keyword (str (ns-name *ns*)) model-name) values)
       (let [[insert-data m2m-data]
@@ -1112,13 +1157,14 @@
 (defn insert-multi!
   "一次插入多条数据"
   [model & {:keys [values debug? clean-data? remove-pk?] :or {debug? false clean-data? true remove-pk? true}}]
-  (let [[model-name db-table-name] (get-model&table-name model)
+  (let [model- @model
+        [model-name db-table-name] (get-model&table-name model-)
         model-key (keyword (str (ns-name *ns*)) model-name)
         new-items (if clean-data?
                     (map-indexed
                       (fn [idx item]
                         (if ($s/valid? model-key item)
-                          (first (clean-insert-model-data model item remove-pk?))
+                          (first (clean-insert-model-data model- item remove-pk?))
                           (throw (Exception. (str "error-data in row : " idx " , " item)))
                           )) values)
                     values)]
@@ -1131,7 +1177,7 @@
 
 (defn update!*
   [model {values :values where-condition :where clean-data? :clean-data? :or {clean-data? true}}]
-  (let [model (get-model model)
+  (let [model @(get-model model)
         model-db-name (get-model-db-name model)
         *tables (atom {:tables {model-db-name {}} :count 1})
         [fields-str fields-values] (get-update!-fields-query model values)
@@ -1180,7 +1226,7 @@
 
 (defn select*
   [model {fields-list :fields aggregate-fields :aggregate annotate-fields :annotate where-condition :where group-by :group-by}]
-  (let [model (get-model model)
+  (let [model @(get-model model)
         model-db-name (get-model-db-name model)
         *tables (atom {:tables {model-db-name {}} :count 1})
         [where-query-str values where-join-table] (get-where-query model where-condition *tables)
@@ -1217,7 +1263,7 @@
 
 (defn delete!*
   [model {where-condition :where}]
-  (let [model (get-model model)
+  (let [model @(get-model model)
         model-db-name (get-model-db-name model)
         *tables (atom {:tables {model-db-name {}} :count 1})
         [where-query-str values where-join-table] (get-where-query model where-condition *tables)

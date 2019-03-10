@@ -138,9 +138,9 @@
   "create table by model"
   [model & {:keys [debug? only-sql?]}]
   (let [*many-to-many-tablle (atom [])
-        model-db-name (get-model-db-name model)
+        model-db-name (get-model-db-name @model)
         sql (str "CREATE TABLE `" model-db-name "` (\n"
-                 (clojure.string/join ",\n" (filter (comp not nil?) (fields-to-db-info model *many-to-many-tablle)))
+                 (clojure.string/join ",\n" (filter (comp not nil?) (fields-to-db-info @model *many-to-many-tablle)))
                  "\n) ENGINE=" (get-db-engine) " DEFAULT CHARSET=" (get-db-charset))]
     (when debug?
       (println sql)
