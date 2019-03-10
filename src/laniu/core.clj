@@ -1318,3 +1318,4 @@
   (raw-execute! "SET foreign_key_checks=0;")
   (raw-execute! (str "truncate " (get-model-db-name @model) ";"))
   (raw-execute! "SET foreign_key_checks=1;"))
+
