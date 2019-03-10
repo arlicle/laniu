@@ -1128,28 +1128,31 @@
 (defn insert!*
   "insert the data into the database."
   [model {:keys [values clean-data? remove-pk?] :or {remove-pk? true clean-data? true}}]
-  (let [model @(get-model model)
-        [model-name db-table-name] (get-model&table-name model)]
-    (if ($s/valid? (keyword (str (ns-name *ns*)) model-name) values)
+  (let [[model-name db-table-name] (get-model&table-name model)]
+    (if ($s/valid? (keyword (:ns-name (meta model)) model-name) values)
       (let [[insert-data m2m-data]
             (if clean-data?
               (clean-insert-model-data model values remove-pk?)
               [values])]
         [insert-data db-table-name])
-      ($s/explain-data (keyword (str (ns-name *ns*)) model-name) values))))
+      ($s/explain-data (keyword (:ns-name (meta model)) model-name) values))))
+
 
 
 (def insert!*-memoize (memoize insert!*))
 
-(defmacro insert!
+
+
+(defn insert!
   "insert the data into the database."
   [model & {:keys [debug? only-sql? clean-data?] :or {debug? false clean-data? true remove-pk? true} :as all}]
-  (let [[insert-data db-table-name] (insert!*-memoize model all)]
+  (println all)
+  (let [[insert-data db-table-name] (insert!*-memoize @model all)]
     (when debug?
       (prn "insert data to db " (keyword db-table-name) " : " insert-data))
     (if only-sql?
       insert-data
-      `(let [[{pk# :generated_key}] (jdbc/insert! (db-connection) ~(keyword db-table-name) ~insert-data)]
+      (let [[{pk# :generated_key}] (jdbc/insert! (db-connection) (keyword db-table-name) insert-data)]
          pk#))))
 
 
@@ -1159,7 +1162,7 @@
   [model & {:keys [values debug? clean-data? remove-pk?] :or {debug? false clean-data? true remove-pk? true}}]
   (let [model- @model
         [model-name db-table-name] (get-model&table-name model-)
-        model-key (keyword (str (ns-name *ns*)) model-name)
+        model-key (keyword (:ns-name (meta model-)) model-name)
         new-items (if clean-data?
                     (map-indexed
                       (fn [idx item]
@@ -1225,7 +1228,7 @@
 
 
 (defn select*
-  [model {fields-list :fields aggregate-fields :aggregate annotate-fields :annotate where-condition :where group-by :group-by}]
+  [model {fields-list :fields aggregate-fields :aggregate annotate-fields :annotate where-condition :where group-by :group-by limit :limit}]
   (let [model @(get-model model)
         model-db-name (get-model-db-name model)
         *tables (atom {:tables {model-db-name {}} :count 1})
@@ -1244,11 +1247,15 @@
                    (str " " (clojure.string/join " " where-join-query-strs)))
                  (when (and where-query-str (not= "" where-query-str))
                    (str " where " where-query-str))
+                 (when limit
+                   (str " " limit))
                  (when group-str
                    (str " group by " (clojure.string/join ", " group-str))))]
     (into [sql] (filter #(not (nil? %)) values))))
 
+
 (def select*-memoize (memoize select*))
+
 
 (defmacro select
   [model & {:keys [debug? only-sql?] :as all}]
@@ -1259,6 +1266,17 @@
       query-vec
       `(jdbc/query (db-connection) ~query-vec))))
 
+
+
+
+(defmacro get-one
+  [model & {:keys [debug? only-sql?] :as all}]
+  (let [query-vec (select*-memoize model (assoc all :limit "limit 1"))]
+    (when debug?
+      (prn query-vec))
+    (if only-sql?
+      query-vec
+      `(jdbc/query (db-connection) ~query-vec))))
 
 
 (defn delete!*
@@ -1318,4 +1336,5 @@
   (raw-execute! "SET foreign_key_checks=0;")
   (raw-execute! (str "truncate " (get-model-db-name @model) ";"))
   (raw-execute! "SET foreign_key_checks=1;"))
+
 
