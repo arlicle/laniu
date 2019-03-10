@@ -1128,15 +1128,15 @@
 (defn insert!*
   "insert the data into the database."
   [model {:keys [values clean-data? remove-pk?] :or {remove-pk? true clean-data? true}}]
-  (let [[model-name db-table-name] (get-model&table-name model)]
-    (if ($s/valid? (keyword (:ns-name (meta model)) model-name) values)
+  (let [[model-name db-table-name] (get-model&table-name model)
+        model-keyword (keyword (:ns-name (meta model)) model-name)]
+    (if ($s/valid? model-keyword values)
       (let [[insert-data m2m-data]
             (if clean-data?
               (clean-insert-model-data model values remove-pk?)
               [values])]
         [insert-data db-table-name])
-      ($s/explain-data (keyword (:ns-name (meta model)) model-name) values))))
-
+      ($s/explain model-keyword values))))
 
 
 (def insert!*-memoize (memoize insert!*))
@@ -1146,14 +1146,15 @@
 (defn insert!
   "insert the data into the database."
   [model & {:keys [debug? only-sql? clean-data?] :or {debug? false clean-data? true remove-pk? true} :as all}]
-  (println all)
   (let [[insert-data db-table-name] (insert!*-memoize @model all)]
     (when debug?
       (prn "insert data to db " (keyword db-table-name) " : " insert-data))
+
     (if only-sql?
       insert-data
-      (let [[{pk# :generated_key}] (jdbc/insert! (db-connection) (keyword db-table-name) insert-data)]
-         pk#))))
+      (if insert-data
+        (let [[{pk# :generated_key}] (jdbc/insert! (db-connection) (keyword db-table-name) insert-data)]
+          pk#)))))
 
 
 
