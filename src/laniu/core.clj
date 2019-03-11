@@ -1218,7 +1218,7 @@
 (defn update!*
   [model {values :values where-condition :where clean-data? :clean-data? :or {clean-data? true}}]
   (println "values:" values)
-  (let [                                                    ;model @(get-model model)
+  (let [;model @(get-model model)
         model-db-name (get-model-db-name model)
         *tables (atom {:tables {model-db-name {}} :count 1})
         ;values (if (symbol? values) (get-model values) values)
@@ -1269,6 +1269,24 @@
                                      (let [[result] (jdbc/insert! connection db-table insert-data)]
                                        result)
                                      {:update-count result}))))))
+
+
+(defn update-or-insert!
+  "Updates columns or inserts a new row in the specified table"
+  [model & {:keys [debug? only-sql? values where clean-data?] :or {clean-data? true} :as all}]
+  (let [query-vec (update!*-memoize @model all)
+        connection (db-connection)
+        [insert-data db-table-name] (insert!* @model all)
+        db-table (keyword db-table-name)
+        ]
+
+    (jdbc/with-db-transaction [connection connection]
+                              (let [[result] (jdbc/execute! connection query-vec)]
+                                (if (zero? result)
+                                  (let [[result] (jdbc/insert! connection db-table insert-data)]
+                                    result)
+                                  {:update-count result})))))
+
 
 
 (defn select*
@@ -1325,7 +1343,7 @@
 
 (defn delete!*
   [model {where-condition :where}]
-  (let [                                                    ;model @(get-model model)
+  (let [;model @(get-model model)
         model-db-name (get-model-db-name model)
         *tables (atom {:tables {model-db-name {}} :count 1})
         [where-query-str values where-join-table] (get-where-query model where-condition *tables)
