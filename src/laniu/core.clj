@@ -1325,7 +1325,7 @@
 
 (defn delete!*
   [model {where-condition :where}]
-  (let [model @(get-model model)
+  (let [                                                    ;model @(get-model model)
         model-db-name (get-model-db-name model)
         *tables (atom {:tables {model-db-name {}} :count 1})
         [where-query-str values where-join-table] (get-where-query model where-condition *tables)
@@ -1340,14 +1340,25 @@
 
 (def delete!*-memoize (memoize delete!*))
 
-(defmacro delete!
+(comment
+  (defmacro delete!
+    [model & {:keys [debug? only-sql?] :as all}]
+    (let [query-vec (delete!*-memoize model all)]
+      (when debug?
+        (prn query-vec))
+      (if only-sql?
+        query-vec
+        `(first (jdbc/execute! (db-connection) ~query-vec))))))
+
+
+(defn delete!
   [model & {:keys [debug? only-sql?] :as all}]
   (let [query-vec (delete!*-memoize model all)]
     (when debug?
       (prn query-vec))
     (if only-sql?
       query-vec
-      `(first (jdbc/execute! (db-connection) ~query-vec)))))
+      (first (jdbc/execute! (db-connection) query-vec)))))
 
 
 
