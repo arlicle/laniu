@@ -984,7 +984,7 @@
 
 (defn get-where-query
   [model where-condition *tables]
-  (let [[op where-condition] (if (list? where-condition)
+  (let [[op where-condition] (if (seq? where-condition)
                                [(first where-condition) (rest where-condition)]
                                ['and where-condition])
         _ (check-where-func op)
@@ -993,13 +993,13 @@
         (if (keyword? (first where-condition))
           (reduce (fn [r [k v]]
                     (let [[s-type new-val]                  ;查询类型
-                          (if (or (vector? v) (list? v))
+                          (if (or (vector? v) (seq? v))
                             ; 如果是vector或list进行单独的处理
                             (parse-sql-func v)
                             ; 否则就是普通的值, 直接等于即可
                             ["= ?" v]
                             )
-                          conj-func (if (or (vector? new-val) (list? new-val))
+                          conj-func (if (or (vector? new-val) (seq? new-val))
                                       #(apply conj %1 %2)
                                       conj)]
                       (-> r
@@ -1353,12 +1353,13 @@
 
 (defn delete!
   [model & {:keys [debug? only-sql?] :as all}]
-  (let [query-vec (delete!*-memoize model all)]
+  (let [query-vec (delete!*-memoize @model all)]
     (when debug?
       (prn query-vec))
     (if only-sql?
       query-vec
       (first (jdbc/execute! (db-connection) query-vec)))))
+
 
 
 
