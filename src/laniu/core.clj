@@ -515,10 +515,10 @@
        ~@(for [[k v] foreignkey-fields]
            (if (not= :self (:model v))
              `(reset! ~(symbol (:model v))
-                (vary-meta @~(symbol (:model v)) assoc-in [:one2many ~(:related-key v)]
-                           {:model ~(symbol model-name)
-                            :field ~k
-                            }))))
+                      (vary-meta @~(symbol (:model v)) assoc-in [:one2many ~(:related-key v)]
+                                 {:model ~(symbol model-name)
+                                  :field ~k
+                                  }))))
 
        ;~@(for [[k v] foreignkey-fields]
        ;    (if (not= :self (:model v))
@@ -526,10 +526,10 @@
 
        ~@(for [[k v] many-to-many-fields]
            `(reset! ~(symbol (:model v))
-              (vary-meta @~(symbol (:model v)) assoc-in [:many2many ~(:related-key v)]
-                         {:model ~(symbol model-name)
-                          :field ~k
-                          }))
+                    (vary-meta @~(symbol (:model v)) assoc-in [:many2many ~(:related-key v)]
+                               {:model ~(symbol model-name)
+                                :field ~k
+                                }))
            )
 
        )))
@@ -1184,6 +1184,8 @@
   (let [model @(get-model model)
         model-db-name (get-model-db-name model)
         *tables (atom {:tables {model-db-name {}} :count 1})
+        values (if (symbol? values) (get-model values) values)
+        where-condition (if (symbol? where-condition) (get-model where-condition) where-condition)
         [fields-str fields-values] (get-update!-fields-query model values)
         [where-query-str values where-join-table] (get-where-query model where-condition *tables)
         where-query-str (if where-query-str (str "where " where-query-str))
@@ -1200,32 +1202,73 @@
 
 (def update!*-memoize (memoize update!*))
 
-(defmacro update!
+(comment
+  (defmacro update!
+    [model & {:keys [debug? only-sql?] :as all}]
+    (let [query-vec (update!*-memoize model all)]
+      (when debug?
+        (prn query-vec))
+      (if only-sql?
+        query-vec
+        `(first (jdbc/execute! (db-connection) ~query-vec))))))
+
+
+
+
+(defn update!*
+  [model {values :values where-condition :where clean-data? :clean-data? :or {clean-data? true}}]
+  (println "values:" values)
+  (let [                                                    ;model @(get-model model)
+        model-db-name (get-model-db-name model)
+        *tables (atom {:tables {model-db-name {}} :count 1})
+        ;values (if (symbol? values) (get-model values) values)
+        ;where-condition (if (symbol? where-condition) (get-model where-condition) where-condition)
+        [fields-str fields-values] (get-update!-fields-query model values)
+        [where-query-str values where-join-table] (get-where-query model where-condition *tables)
+        where-query-str (if where-query-str (str "where " where-query-str))
+        where-join-query-str (clojure.string/join " " (get-join-table-query where-join-table))
+        fields-str (if fields-str (str " set " fields-str))
+        sql (str "update " model-db-name
+                 (if (and where-join-query-str (not= "" where-join-query-str))
+                   (str " " where-join-query-str))
+                 fields-str " " where-query-str)
+        query-vec (-> [sql]
+                      (into fields-values)
+                      (into (filter #(not (nil? %)) values)))]
+    query-vec))
+
+(def update!*-memoize (memoize update!*))
+
+(defn update!
   [model & {:keys [debug? only-sql?] :as all}]
-  (let [query-vec (update!*-memoize model all)]
+  (let [query-vec (update!* @model all)]
     (when debug?
       (prn query-vec))
     (if only-sql?
       query-vec
-      `(first (jdbc/execute! (db-connection) ~query-vec)))))
+      (first (jdbc/execute! (db-connection) query-vec)))))
 
 
 
-(defmacro update-or-insert!
-  "Updates columns or inserts a new row in the specified table"
-  [model & {:keys [debug? only-sql? values where clean-data?] :or {clean-data? true} :as all}]
-  (let [query-vec (update!*-memoize model all)
-        connection (db-connection)
-        [insert-data db-table-name] (insert!* model all)
-        db-table (keyword db-table-name)
-        ]
-    (jdbc/with-db-transaction [connection connection]
-                              (let [[result] (jdbc/execute! connection query-vec)]
-                                (if (zero? result)
-                                  (let [[result] (jdbc/insert! connection db-table insert-data)]
-                                    result)
-                                  {:update-count result})))))
 
+
+
+(comment
+  (defmacro update-or-insert!
+    "Updates columns or inserts a new row in the specified table"
+    [model & {:keys [debug? only-sql? values where clean-data?] :or {clean-data? true} :as all}]
+    `(let [query-vec (update!*-memoize model all)
+           connection (db-connection)
+           [insert-data db-table-name] (insert!* (get-model model) all)
+           db-table (keyword db-table-name)
+           ]
+
+       (jdbc/with-db-transaction [connection connection]
+                                 (let [[result] (jdbc/execute! connection query-vec)]
+                                   (if (zero? result)
+                                     (let [[result] (jdbc/insert! connection db-table insert-data)]
+                                       result)
+                                     {:update-count result}))))))
 
 
 (defn select*
@@ -1277,7 +1320,7 @@
       (prn query-vec))
     (if only-sql?
       query-vec
-      `(jdbc/query (db-connection) ~query-vec))))
+      `(first (jdbc/query (db-connection) ~query-vec)))))
 
 
 (defn delete!*
