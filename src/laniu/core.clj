@@ -59,8 +59,7 @@
 (if (not @*current-pooled-dbs)
   (let [{db-conf :databases} (load-config :file "settings.edn")]
     (if db-conf
-      (defdb db-conf))
-    (println db-conf)))
+      (defdb db-conf))))
 
 
 
