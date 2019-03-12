@@ -497,8 +497,7 @@
 
        ($s/def ~(keyword ns-name (name model-name))
          ($s/keys :req-un ~req-fields
-                  :opt-un ~opt-fields
-                  ))
+                  :opt-un ~opt-fields))
 
        (def ~(symbol model-name)
          ~(atom models-fields))
@@ -1290,7 +1289,7 @@
 
 (defn select*
   [model {fields-list :fields aggregate-fields :aggregate annotate-fields :annotate where-condition :where group-by :group-by limit :limit}]
-  (let [model @(get-model model)
+  (let [                                                    ;model @(get-model model)
         model-db-name (get-model-db-name model)
         *tables (atom {:tables {model-db-name {}} :count 1})
         [where-query-str values where-join-table] (get-where-query model where-condition *tables)
@@ -1318,26 +1317,29 @@
 (def select*-memoize (memoize select*))
 
 
-(defmacro select
+(defn select
   [model & {:keys [debug? only-sql?] :as all}]
-  (let [query-vec (select*-memoize model all)]
+  (let [query-vec (select*-memoize @model all)]
     (when debug?
       (prn query-vec))
     (if only-sql?
       query-vec
-      `(jdbc/query (db-connection) ~query-vec))))
+      (jdbc/query (db-connection) query-vec))))
 
 
 
 
-(defmacro get-one
+(defn get-one
   [model & {:keys [debug? only-sql?] :as all}]
-  (let [query-vec (select*-memoize model (assoc all :limit "limit 1"))]
+  (let [query-vec (select*-memoize @model (assoc all :limit "limit 1"))]
     (when debug?
       (prn query-vec))
     (if only-sql?
       query-vec
-      `(first (jdbc/query (db-connection) ~query-vec)))))
+      (first (jdbc/query (db-connection) query-vec)))))
+
+
+
 
 
 (defn delete!*
