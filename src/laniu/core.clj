@@ -562,6 +562,13 @@
   (:primary-key (meta model)))
 
 
+(defn get-model
+  "get model by symbol, if not find, throw error."
+  [model-symbol]
+  (if-let [v (resolve model-symbol)]
+    (var-get v)
+    (throw (Exception. (str "Not find model " model-symbol)))))
+
 
 (defn get-model-db-name
   ([model1 model2]
@@ -638,12 +645,14 @@
   [model foreignkey-field field]
   (if (= :self (get-in model [foreignkey-field :model]))
     (get-in model [field :db_column])
-    (if-let [c (get-in model [foreignkey-field :model field :db_column])]
-      c
-      (let [m-data (meta model)]
-        ; 如果没有，那么就从one2many中拿
-        (if-let [f-model (get-in m-data [:one2many foreignkey-field :model])]
-          (get-field-db-column f-model field))))))
+    (let [f-model @(get-model (get-in model [foreignkey-field :model]))
+          c (get-in f-model [field :db_column])]
+      (if c
+        c
+        (let [m-data (meta model)]
+          ; 如果没有，那么就从one2many中拿
+          (if-let [f-model (get-in m-data [:one2many foreignkey-field :model])]
+            (get-field-db-column f-model field)))))))
 
 
 
@@ -668,7 +677,7 @@
   [from-where-or-select-or-nil join-model-db-name foreignkey-field alias is-field-allow-null?]
   "
   [model *tables from foreignkey-field join-model-db-name]
-
+  (println "foreignkey-field:" foreignkey-field "join-model-db-name:" join-model-db-name)
   (let [tables @*tables a (get-in tables [:tables join-model-db-name]) c (inc (:count tables)) null? (get-in model [foreignkey-field :null?])]
     (cond
       (nil? a)
@@ -686,6 +695,7 @@
 
 
 
+
 (defn get-foreignkey-model-db-name
   "获取foreignkey对应的数据库
   1 如果foreignkey 到:self，那么拿自身即可
@@ -695,11 +705,12 @@
   返回foreignkey类型 和对应的字段db
   "
   [model foreignkey-field]
-  (let [f-model (get-in model [foreignkey-field :model])
+  (let [f-model @(get-model (get-in model [foreignkey-field :model]))
         m-data (meta model)
         one2many-model (get-in m-data [:one2many foreignkey-field :model])
         be-many2many-model (get-in m-data [:many2many foreignkey-field :model])
         ]
+
     (cond
       ; foreignkey to self
       (= f-model :self)
@@ -714,6 +725,7 @@
       (= :many-to-many-field (get-in model [foreignkey-field :type]))
       [:many-to-many]
       :else
+
       [:field (get-model-db-name f-model)])))
 
 
@@ -851,6 +863,9 @@
 
 
 
+
+
+
 (defn clean-insert-model-data
   [model data remove-pk?]
   (let [pk (get-model-primary-key model) fields (get-model-fields model) fields (if remove-pk? (clojure.set/difference fields #{pk}) fields)]
@@ -944,12 +959,7 @@
 
 
 
-(defn get-model
-  "get model by symbol, if not find, throw error."
-  [model-symbol]
-  (if-let [v (resolve model-symbol)]
-    (var-get v)
-    (throw (Exception. (str "Not find model " model-symbol)))))
+
 
 
 
@@ -1043,7 +1053,9 @@
       [(mapv (fn [k]
                (if (= (type k) clojure.lang.Keyword)
                  ; 一种是字段直接就是关键字，表示字段名
-                 (get-field-db-name model k :*join-table *join-table :*tables *tables :from :fields)
+                 (do
+                   (println "keyword:" k)
+                   (get-field-db-name model k :*join-table *join-table :*tables *tables :from :fields))
                  ; 一种字段是有中括号，表示有别名
                  (let [[k0 k1] k]
                    ; 如果别名中有1就进行报错
@@ -1053,6 +1065,8 @@
        @*join-table])
     ; 处理为每个字段
     [(mapv #(get-field-db-name model %) (:fields (meta model))) nil]))
+
+
 
 
 (defn get-annotate-key
@@ -1240,13 +1254,14 @@
 
 (defn select*
   [model {fields-list :fields aggregate-fields :aggregate annotate-fields :annotate where-condition :where group-by :group-by limit :limit}]
-  (let [                                                    ;model @(get-model model)
+  (let [;model @(get-model model)
         model-db-name (get-model-db-name model)
         *tables (atom {:tables {model-db-name {}} :count 1})
         [where-query-str values where-join-table] (get-where-query model where-condition *tables)
         [fields-strs field-join-table] (if aggregate-fields
                                          [(get-aggregate-fields-query model aggregate-fields)]
                                          (get-select-fields-query model fields-list *tables))
+        _ (println "fields-strs" fields-strs "join-table:" field-join-table)
         [annotate-strs annotate-join-table group-by2] (if annotate-fields (get-annotate-query model annotate-fields *tables))
         group-str (if group-by2 group-by2 (parse-group-by model group-by))
         fields-join-query-strs (get-join-table-query (concat field-join-table annotate-join-table))
@@ -1280,9 +1295,12 @@
 
 
 
+
+
+
 (defn get-one
   [model & {:keys [debug? only-sql?] :as all}]
-  (let [query-vec (select*-memoize @model (assoc all :limit "limit 1"))]
+  (let [query-vec (select* @model (assoc all :limit "limit 1"))]
     (when debug?
       (prn query-vec))
     (if only-sql?
