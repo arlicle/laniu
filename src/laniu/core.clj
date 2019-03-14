@@ -643,9 +643,14 @@
   如果当前没有这个foreignkey字段，那么可能是one2many的字段，从foreignkey model中来取对应字段
   "
   [model foreignkey-field field]
+  (println "model:" model)
+  (println foreignkey-field)
+  (println field)
+  (println (get-in model [foreignkey-field :model]))
   (if (= :self (get-in model [foreignkey-field :model]))
     (get-in model [field :db_column])
     (let [f-model @(get-model (get-in model [foreignkey-field :model]))
+          _ (println f-model)
           c (get-in f-model [field :db_column])]
       (if c
         c
@@ -653,6 +658,10 @@
           ; 如果没有，那么就从one2many中拿
           (if-let [f-model (get-in m-data [:one2many foreignkey-field :model])]
             (get-field-db-column f-model field)))))))
+
+
+
+  (get-foreignkey-field-db-column @Token :user :true_name)
 
 
 
@@ -677,8 +686,13 @@
   [from-where-or-select-or-nil join-model-db-name foreignkey-field alias is-field-allow-null?]
   "
   [model *tables from foreignkey-field join-model-db-name]
-  (println "foreignkey-field:" foreignkey-field "join-model-db-name:" join-model-db-name)
+  ;(println "foreignkey-field:" foreignkey-field "join-model-db-name:" join-model-db-name)
   (let [tables @*tables a (get-in tables [:tables join-model-db-name]) c (inc (:count tables)) null? (get-in model [foreignkey-field :null?])]
+
+    (println "\n\n\n")
+    (println  "aaa:" a "f:" foreignkey-field)
+    (println "\n\n\n")
+
     (cond
       (nil? a)
       (do
@@ -693,7 +707,13 @@
       :else
       [nil join-model-db-name foreignkey-field (get-in tables [:tables join-model-db-name foreignkey-field]) null?])))
 
-
+;(let [*tables (atom {:tables {"auth_token" {}} :count 1})]
+;  (println (get-foreignkey-table @Token *tables :fields :user "auth_user"))
+;  (println (get-foreignkey-table @Token *tables :fields :user "auth_user"))
+;  (println (get-foreignkey-table @Token *tables :fields :user "auth_user"))
+;
+;  (println @*tables)
+;  )
 
 
 (defn get-foreignkey-model-db-name
@@ -710,7 +730,11 @@
         one2many-model (get-in m-data [:one2many foreignkey-field :model])
         be-many2many-model (get-in m-data [:many2many foreignkey-field :model])
         ]
-
+    ;(println "f-model:" f-model)
+    ;(println "foreignkey-field:" foreignkey-field)
+    ;(println m-data)
+    ;(println one2many-model)
+    ;(println be-many2many-model)
     (cond
       ; foreignkey to self
       (= f-model :self)
@@ -725,9 +749,17 @@
       (= :many-to-many-field (get-in model [foreignkey-field :type]))
       [:many-to-many]
       :else
+      (do
+        ;(println "else:")
+        ;(println (type f-model))
+        [:field (get-model-db-name f-model)]))))
 
-      [:field (get-model-db-name f-model)])))
-
+;(get-model-db-name @User)
+;(get-foreignkey-model-db-name @Token :user)
+;
+;@User
+;
+;(get-in @Token [:user :model])
 
 
 (defn get-many-to-many-table
@@ -810,6 +842,8 @@
         [_ foreingnkey-field-name link-table-field] (re-find #"([\w-]+)\.([\w-]+)" k_name)
         foreignkey-field (keyword foreingnkey-field-name)
         link-table-field (keyword link-table-field)]
+    (println "foreingnkey-field-name:" foreignkey-field)
+    (println "link-field-name:" link-table-field)
     (cond
       ; many-to-many-field
       (and foreignkey-field (= :many-to-many-field (get-in model [foreignkey-field :type])))
@@ -839,13 +873,21 @@
                                 " = " be-many-db "." be-many-primary-db)])
         (str be-many-db "." (get-field-db-column be-model link-table-field)))
 
+      ; foreignkey id
+      (and foreignkey-field link-table-field (= link-table-field :id) *join-table *tables)
+      (get-field-db-column model foreignkey-field)
+
       ; foreignkey
       (and foreignkey-field link-table-field *join-table *tables)
       (let [_ (check-model-field model foreignkey-field)
             [r-type join-model-db-name] (get-foreignkey-model-db-name model foreignkey-field)
+            _ (println "join-model-db-name:" join-model-db-name)
+            _ (println "foreignkey-field:" from foreignkey-field)
             join-table (get-foreignkey-table model *tables from foreignkey-field join-model-db-name)
+            _ (println "6666:" join-table)
             ; 处理数据库别名问题
             join-model-db-name (if-let [table-alias (get join-table 3)] table-alias (get join-table 1))]
+        (println "join-table:" from join-table)
         (if (and (= :id link-table-field) (not= r-type :one2many))
           (str model-db-table "." (get-field-db-column model foreignkey-field))
           (do
@@ -855,14 +897,12 @@
                                           " = " join-model-db-name "."
                                           (get-foreignkey-to-field-db-column model foreignkey-field)
                                           )])
+            (println "jjjbbbccc:")
             (str join-model-db-name "." (get-foreignkey-field-db-column model foreignkey-field link-table-field)))))
       :else
       (do
         (check-model-field model k)
         (str model-db-table "." (get-field-db-column model k))))))
-
-
-
 
 
 
@@ -959,10 +999,6 @@
 
 
 
-
-
-
-
 (defn check-where-func
   [op]
   (if (not (contains? #{'or 'and 'not} op))
@@ -1053,9 +1089,7 @@
       [(mapv (fn [k]
                (if (= (type k) clojure.lang.Keyword)
                  ; 一种是字段直接就是关键字，表示字段名
-                 (do
-                   (println "keyword:" k)
-                   (get-field-db-name model k :*join-table *join-table :*tables *tables :from :fields))
+                 (get-field-db-name model k :*join-table *join-table :*tables *tables :from :fields)
                  ; 一种字段是有中括号，表示有别名
                  (let [[k0 k1] k]
                    ; 如果别名中有1就进行报错
@@ -1066,6 +1100,16 @@
     ; 处理为每个字段
     [(mapv #(get-field-db-name model %) (:fields (meta model))) nil]))
 
+;(let [*tables (atom {:tables {"auth_token" {}} :count 1})]
+;  (get-select-fields-query @Token [:user.true_name :user.no] *tables)
+;  )
+
+
+;(let [*tables (atom {:tables {"auth_token" {}} :count 1}) *join-table (atom [])]
+;  (get-field-db-name @Token :user.true_name :*join-table *join-table :*tables *tables :from :fields)
+;  (println @*tables)
+;  (println @*join-table)
+;  )
 
 
 
@@ -1191,12 +1235,6 @@
 
 
 
-
-
-
-
-
-
 (defn update!*
   [model {values :values where-condition :where clean-data? :clean-data? :or {clean-data? true}}]
   (println "values:" values)
@@ -1232,8 +1270,6 @@
 
 
 
-
-
 (defn update-or-insert!
   "Updates columns or inserts a new row in the specified table"
   [model & {:keys [debug? only-sql? values where clean-data?] :or {clean-data? true} :as all}]
@@ -1254,18 +1290,21 @@
 
 (defn select*
   [model {fields-list :fields aggregate-fields :aggregate annotate-fields :annotate where-condition :where group-by :group-by limit :limit}]
-  (let [;model @(get-model model)
+  (let [
         model-db-name (get-model-db-name model)
         *tables (atom {:tables {model-db-name {}} :count 1})
         [where-query-str values where-join-table] (get-where-query model where-condition *tables)
+
         [fields-strs field-join-table] (if aggregate-fields
                                          [(get-aggregate-fields-query model aggregate-fields)]
                                          (get-select-fields-query model fields-list *tables))
-        _ (println "fields-strs" fields-strs "join-table:" field-join-table)
+
         [annotate-strs annotate-join-table group-by2] (if annotate-fields (get-annotate-query model annotate-fields *tables))
         group-str (if group-by2 group-by2 (parse-group-by model group-by))
+
         fields-join-query-strs (get-join-table-query (concat field-join-table annotate-join-table))
         where-join-query-strs (get-join-table-query where-join-table)
+
         sql (str "select " (clojure.string/join ", " (concat fields-strs annotate-strs)) " from " model-db-name
                  (when (seq fields-join-query-strs)
                    (str " " (clojure.string/join " " fields-join-query-strs)))
@@ -1278,6 +1317,7 @@
                  (when group-str
                    (str " group by " (clojure.string/join ", " group-str))))]
     (into [sql] (filter #(not (nil? %)) values))))
+
 
 
 (def select*-memoize (memoize select*))
@@ -1294,10 +1334,6 @@
 
 
 
-
-
-
-
 (defn get-one
   [model & {:keys [debug? only-sql?] :as all}]
   (let [query-vec (select* @model (assoc all :limit "limit 1"))]
@@ -1306,8 +1342,6 @@
     (if only-sql?
       query-vec
       (first (jdbc/query (db-connection) query-vec)))))
-
-
 
 
 
@@ -1328,15 +1362,6 @@
 
 (def delete!*-memoize (memoize delete!*))
 
-(comment
-  (defmacro delete!
-    [model & {:keys [debug? only-sql?] :as all}]
-    (let [query-vec (delete!*-memoize model all)]
-      (when debug?
-        (prn query-vec))
-      (if only-sql?
-        query-vec
-        `(first (jdbc/execute! (db-connection) ~query-vec))))))
 
 
 (defn delete!
@@ -1347,7 +1372,6 @@
     (if only-sql?
       query-vec
       (first (jdbc/execute! (db-connection) query-vec)))))
-
 
 
 
