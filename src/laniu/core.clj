@@ -63,6 +63,14 @@
 
 
 
+(defn get-model
+  "get model by symbol, if not find, throw error."
+  [model-symbol]
+  (if-let [v (resolve model-symbol)]
+    (var-get v)
+    (throw (Exception. (str "Not find model " model-symbol)))))
+
+
 
 (defn get-model-name
   [model]
@@ -380,9 +388,11 @@
                              (assoc r k
                                       (case (:type v)
                                         :foreignkey
-                                        (merge default {:db_column (str (name k) "_id") :to_field :id :related-key (model-name-to-key model-name)} v)
+                                        (do
+                                          (println "model:" @(get-model (:model v)) (type (:model v)))
+                                          (merge default {:db_column (str (name k) "_id") :to_field :id :related-key (model-name-to-key model-name)} v {:model @(get-model (:model v))}))
                                         :many-to-many-field
-                                        (merge default {:through-db (str model_db_name "_" (name k)) :through-field-columns [(clojure.string/lower-case (str model-name "_id")) (clojure.string/lower-case (str (:model v) "_id"))] :related-key (model-name-to-key model-name)} v)
+                                        (merge default {:through-db (str model_db_name "_" (name k)) :through-field-columns [(clojure.string/lower-case (str model-name "_id")) (clojure.string/lower-case (str (:model v) "_id"))] :related-key (model-name-to-key model-name)} v {:model @(get-model (:model v))})
                                         (merge default {:db_column (name k)} v)
                                         ))
                              ) {} fields)]
@@ -450,6 +460,8 @@
                                   :meta                 meta-configs})
         ]
 
+    ;(println fields-configs)
+
     `(do
        ~@(for [[k field-opts] fields-configs]
            `($s/def
@@ -502,35 +514,63 @@
        (def ~(symbol model-name)
          ~(atom models-fields))
 
-       ;~@(for [[k v] foreignkey-fields]
-       ;    (if (not= :self (:model v))
-       ;      `(def ~(symbol (:model v))
-       ;         (vary-meta ~(symbol (:model v)) assoc-in [:one2many ~(:related-key v)]
-       ;                    {:model ~(symbol model-name)
-       ;                     :field ~k
-       ;                     }))))
 
        ~@(for [[k v] foreignkey-fields]
            (if (not= :self (:model v))
-             `(reset! ~(symbol (:model v))
-                      (vary-meta @~(symbol (:model v)) assoc-in [:one2many ~(:related-key v)]
-                                 {:model ~(symbol model-name)
-                                  :field ~k
-                                  }))))
+             (let [model_1 (symbol (:name (meta (:model v))))]
+               `(reset! ~model_1
+                  (vary-meta @~model_1 assoc-in [:one2many ~(:related-key v)]
+                             {:model ~(symbol model-name)
+                              :field ~k
+                              })))))
 
-       ;~@(for [[k v] foreignkey-fields]
-       ;    (if (not= :self (:model v))
-       ;      `(alter-meta! (resolve (quote ~(:model v))) #(assoc-in % [:one2many ~(:related-key v)] {:model ~(symbol model-name) :field ~k}))))
 
        ~@(for [[k v] many-to-many-fields]
-           `(reset! ~(symbol (:model v))
-                    (vary-meta @~(symbol (:model v)) assoc-in [:many2many ~(:related-key v)]
-                               {:model ~(symbol model-name)
-                                :field ~k
-                                }))
+           (let [model_1 (symbol (:name (meta (:model v))))]
+             `(reset! ~model_1
+                      (vary-meta @~model_1 assoc-in [:many2many ~(:related-key v)]
+                                 {:model ~(symbol model-name)
+                                  :field ~k
+                                  })))
            )
 
        )))
+;
+;(defmodel User
+;                :fields {:username  {:type :char-field :verbose-name "用户名" :max-length 30}
+;                         :true_name {:type :char-field :verbose-name "真实姓名" :max-length 30}
+;                         :no        {:type :char-field :verbose-name "工号" :max-length 30}
+;                         :password  {:type :char-field :verbose-name "密码" :max-length 64}
+;                         :status    {:type :tiny-int-field :verbose-name "用户状态" :default 1}
+;                         :created   {:type :pos-int-field :verbose-name "创建时间" :default #(quot (System/currentTimeMillis) 1000)}}
+;                :meta {:db_table "auth_user"})
+;(macroexpand-1
+;  '(defmodel Token
+;            :fields {:user    {:type :foreignkey :verbose-name "Token所有者" :model User}
+;                     :token   {:type :char-field :verbose-name "唯一token" :max-length 64 :db-index true :unique true}
+;                     :device  {:type :tiny-int-field :verbose-name "设备类型" :max-length 1 :choices [[0 "未知"] [1 "PC"] [2 "Terminal"] [3 "Mobile"]]}
+;                     ; 默认24小时过期
+;                     :expired {:type :pos-int-field :verbose-name "过期时间" :default #(+ 86400 (quot (System/currentTimeMillis) 1000))}}
+;            :meta {:db_table "auth_token"}))
+;
+;(defmodel Token
+;          :fields {:user    {:type :foreignkey :verbose-name "Token所有者" :model User}
+;                   :token   {:type :char-field :verbose-name "唯一token" :max-length 64 :db-index true :unique true}
+;                   :device  {:type :tiny-int-field :verbose-name "设备类型" :max-length 1 :choices [[0 "未知"] [1 "PC"] [2 "Terminal"] [3 "Mobile"]]}
+;                   ; 默认24小时过期
+;                   :expired {:type :pos-int-field :verbose-name "过期时间" :default #(+ 86400 (quot (System/currentTimeMillis) 1000))}}
+;          :meta {:db_table "auth_token"})
+;
+;
+;User
+;(meta @User)
+
+
+;(defmodel Group
+;                :fields {:name        {:type :char-field :verbose-name "组名" :max-length 30}
+;                         :users       {:type :many-to-many-field :verbose-name "组员" :model User}
+;                         :permissions {:type :text-field :verbose-name "权限"}}
+;                :meta {:db_table "auth_group"})
 
 ;(defmodel Category
 ;                ;; 咨询分类
@@ -562,12 +602,7 @@
   (:primary-key (meta model)))
 
 
-(defn get-model
-  "get model by symbol, if not find, throw error."
-  [model-symbol]
-  (if-let [v (resolve model-symbol)]
-    (var-get v)
-    (throw (Exception. (str "Not find model " model-symbol)))))
+
 
 
 (defn get-model-db-name
@@ -661,7 +696,7 @@
 
 
 
-  (get-foreignkey-field-db-column @Token :user :true_name)
+;(get-foreignkey-field-db-column @Token :user :true_name)
 
 
 
@@ -690,7 +725,7 @@
   (let [tables @*tables a (get-in tables [:tables join-model-db-name]) c (inc (:count tables)) null? (get-in model [foreignkey-field :null?])]
 
     (println "\n\n\n")
-    (println  "aaa:" a "f:" foreignkey-field)
+    (println "aaa:" a "f:" foreignkey-field)
     (println "\n\n\n")
 
     (cond
