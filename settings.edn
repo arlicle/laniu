@@ -1,7 +1,8 @@
-{:databases (comment {:default {:adapter       "mysql"
-                                :username      "username"
-                                :password      "password"
-                                :database-name "database"
-                                :server-name   "localhost"
-                                :port-number   3306
-                                :use-ssl       false}})}
+{:databases nil}
+;{:databases {:default {:adapter       "mysql"
+;                       :username      "username"
+;                       :password      "password"
+;                       :database-name "database"
+;                       :server-name   "localhost"
+;                       :port-number   3306
+;                       :use-ssl       false}}}

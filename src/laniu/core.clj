@@ -124,16 +124,12 @@
   For large amounts of text, use text-field.
   "
   [opts]
-  (let [
-        max-length-spec (if-let [max-length (:max-length opts)]
+  (let [max-length-spec (if-let [max-length (:max-length opts)]
                           `#(<= (count %) ~max-length))
         choices-spec (if-let [choices (:choices opts)]
                        (let [choices-map (into {} choices)]
-                         `#(contains? ~choices-map %)))
-        ]
-
-    (filterv identity [`string? max-length-spec choices-spec])
-    ))
+                         `#(contains? ~choices-map %)))]
+    (filterv identity [`string? max-length-spec choices-spec])))
 
 
 
@@ -143,16 +139,12 @@
   For large amounts of text, use text-field.
   "
   [opts]
-  (let [
-        max-length-spec (if-let [max-length (:max-length opts)]
+  (let [max-length-spec (if-let [max-length (:max-length opts)]
                           `#(<= (count %) ~max-length))
         choices-spec (if-let [choices (:choices opts)]
                        (let [choices-map (into {} choices)]
-                         `#(contains? ~choices-map %)))
-        ]
-
-    (filterv identity [`string? max-length-spec choices-spec])
-    ))
+                         `#(contains? ~choices-map %)))]
+    (filterv identity [`string? max-length-spec choices-spec])))
 
 
 
@@ -188,8 +180,7 @@
   An integer. Values from 0 to 4294967295 are safe in all databases.
   "
   [opts]
-  (let [
-        max-value (:max-value opts)
+  (let [max-value (:max-value opts)
         min-value (:min-value opts)
 
         max-value (if (and max-value (> max-value 0)) 0 max-value)
@@ -202,11 +193,8 @@
 
         choices-spec (if-let [choices (:choices opts)]
                        (let [choices-map (into {} choices)]
-                         `#(contains? ~choices-map %)))
-        ]
-
-    (filterv identity [`int? max-value-spec min-value-spec choices-spec])
-    ))
+                         `#(contains? ~choices-map %)))]
+    (filterv identity [`int? max-value-spec min-value-spec choices-spec])))
 
 
 
@@ -215,8 +203,7 @@
   An integer. Values from -9223372036854775808 to 9223372036854775807 are safe in all databases.
   "
   [opts]
-  (let [
-        max-value (:max-value opts)
+  (let [max-value (:max-value opts)
         min-value (:min-value opts)
 
         max-value (if (and max-value (> max-value 9223372036854775807)) 2147483647 max-value)
@@ -229,11 +216,9 @@
 
         choices-spec (if-let [choices (:choices opts)]
                        (let [choices-map (into {} choices)]
-                         `#(contains? ~choices-map %)))
-        ]
+                         `#(contains? ~choices-map %)))]
 
-    (filterv identity [`int? max-value-spec min-value-spec choices-spec])
-    ))
+    (filterv identity [`int? max-value-spec min-value-spec choices-spec])))
 
 
 (defn- small-int-field-spec
@@ -242,8 +227,7 @@
   Values from  -32768 to 32767 are safe in all databases.
   "
   [opts]
-  (let [
-        max-value (:max-value opts)
+  (let [max-value (:max-value opts)
         min-value (:min-value opts)
 
         max-value (if (and max-value (> max-value 32767)) 32767 max-value)
@@ -256,10 +240,8 @@
 
         choices-spec (if-let [choices (:choices opts)]
                        (let [choices-map (into {} choices)]
-                         `#(contains? ~choices-map %)))
-        ]
-    (filterv identity [`int? max-value-spec min-value-spec choices-spec])
-    ))
+                         `#(contains? ~choices-map %)))]
+    (filterv identity [`int? max-value-spec min-value-spec choices-spec])))
 
 
 
@@ -269,8 +251,7 @@
   Values from -128 to 127 are safe in all databases.
   "
   [opts]
-  (let [
-        max-value (:max-value opts)
+  (let [max-value (:max-value opts)
         min-value (:min-value opts)
 
         max-value (if (and max-value (> max-value 127)) 127 max-value)
@@ -283,10 +264,8 @@
 
         choices-spec (if-let [choices (:choices opts)]
                        (let [choices-map (into {} choices)]
-                         `#(contains? ~choices-map %)))
-        ]
-    (filterv identity [`int? max-value-spec min-value-spec choices-spec])
-    ))
+                         `#(contains? ~choices-map %)))]
+    (filterv identity [`int? max-value-spec min-value-spec choices-spec])))
 
 
 
@@ -296,8 +275,7 @@
   Values from 0 to 255 are safe in all databases.
   "
   [opts]
-  (let [
-        max-value (:max-value opts)
+  (let [max-value (:max-value opts)
         min-value (:min-value opts)
 
         max-value (if (and max-value (> max-value 255)) 255 max-value)
@@ -310,10 +288,8 @@
 
         choices-spec (if-let [choices (:choices opts)]
                        (let [choices-map (into {} choices)]
-                         `#(contains? ~choices-map %)))
-        ]
-    (filterv identity [`int? max-value-spec min-value-spec choices-spec])
-    ))
+                         `#(contains? ~choices-map %)))]
+    (filterv identity [`int? max-value-spec min-value-spec choices-spec])))
 
 
 
@@ -322,8 +298,7 @@
   A floating-point number
   "
   [opts]
-  (let [
-        max-value (:max-value opts)
+  (let [max-value (:max-value opts)
         min-value (:min-value opts)
 
         max-value-spec (if max-value
@@ -334,10 +309,8 @@
         choices-spec (if-let [choices (:choices opts)]
                        (let [choices-map (into {} choices)]
                          `#(contains? ~choices-map %)))
-        type-spec `#(or (int? %) (float? %))
-        ]
-    (filterv identity [type-spec max-value-spec min-value-spec choices-spec])
-    ))
+        type-spec `#(or (int? %) (float? %))]
+    (filterv identity [type-spec max-value-spec min-value-spec choices-spec])))
 
 
 
@@ -388,8 +361,8 @@
                              (assoc r k
                                       (case (:type v)
                                         :foreignkey
-                                        (do
-                                          (println "model:" @(get-model (:model v)) (type (:model v)))
+                                        (if (= :self (:model v))
+                                          (merge default {:db_column (str (name k) "_id") :to_field :id :related-key (model-name-to-key model-name)} v)
                                           (merge default {:db_column (str (name k) "_id") :to_field :id :related-key (model-name-to-key model-name)} v {:model @(get-model (:model v))}))
                                         :many-to-many-field
                                         (merge default {:through-db (str model_db_name "_" (name k)) :through-field-columns [(clojure.string/lower-case (str model-name "_id")) (clojure.string/lower-case (str (:model v) "_id"))] :related-key (model-name-to-key model-name)} v {:model @(get-model (:model v))})
@@ -457,10 +430,7 @@
                                   :name                 (name model-name)
                                   :ns-name              ns-name
                                   :primary-key          pk
-                                  :meta                 meta-configs})
-        ]
-
-    ;(println fields-configs)
+                                  :meta                 meta-configs})]
 
     `(do
        ~@(for [[k field-opts] fields-configs]
@@ -502,10 +472,7 @@
                     :date-field
                     (date-field-spec field-opts)
 
-                    (do
-                      (println "(:type field-opts):" (:type field-opts))
-                      ['string?])))))
-
+                    ['string?]))))
 
        ($s/def ~(keyword ns-name (name model-name))
          ($s/keys :req-un ~req-fields
@@ -519,10 +486,9 @@
            (if (not= :self (:model v))
              (let [model_1 (symbol (:name (meta (:model v))))]
                `(reset! ~model_1
-                  (vary-meta @~model_1 assoc-in [:one2many ~(:related-key v)]
-                             {:model ~(symbol model-name)
-                              :field ~k
-                              })))))
+                        (vary-meta @~model_1 assoc-in [:one2many ~(:related-key v)]
+                                   {:model ~(symbol model-name)
+                                    :field ~k})))))
 
 
        ~@(for [[k v] many-to-many-fields]
@@ -531,77 +497,13 @@
                       (vary-meta @~model_1 assoc-in [:many2many ~(:related-key v)]
                                  {:model ~(symbol model-name)
                                   :field ~k
-                                  })))
-           )
+                                  })))))))
 
-       )))
-;
-;(defmodel User
-;                :fields {:username  {:type :char-field :verbose-name "用户名" :max-length 30}
-;                         :true_name {:type :char-field :verbose-name "真实姓名" :max-length 30}
-;                         :no        {:type :char-field :verbose-name "工号" :max-length 30}
-;                         :password  {:type :char-field :verbose-name "密码" :max-length 64}
-;                         :status    {:type :tiny-int-field :verbose-name "用户状态" :default 1}
-;                         :created   {:type :pos-int-field :verbose-name "创建时间" :default #(quot (System/currentTimeMillis) 1000)}}
-;                :meta {:db_table "auth_user"})
-;(macroexpand-1
-;  '(defmodel Token
-;            :fields {:user    {:type :foreignkey :verbose-name "Token所有者" :model User}
-;                     :token   {:type :char-field :verbose-name "唯一token" :max-length 64 :db-index true :unique true}
-;                     :device  {:type :tiny-int-field :verbose-name "设备类型" :max-length 1 :choices [[0 "未知"] [1 "PC"] [2 "Terminal"] [3 "Mobile"]]}
-;                     ; 默认24小时过期
-;                     :expired {:type :pos-int-field :verbose-name "过期时间" :default #(+ 86400 (quot (System/currentTimeMillis) 1000))}}
-;            :meta {:db_table "auth_token"}))
-;
-;(defmodel Token
-;          :fields {:user    {:type :foreignkey :verbose-name "Token所有者" :model User}
-;                   :token   {:type :char-field :verbose-name "唯一token" :max-length 64 :db-index true :unique true}
-;                   :device  {:type :tiny-int-field :verbose-name "设备类型" :max-length 1 :choices [[0 "未知"] [1 "PC"] [2 "Terminal"] [3 "Mobile"]]}
-;                   ; 默认24小时过期
-;                   :expired {:type :pos-int-field :verbose-name "过期时间" :default #(+ 86400 (quot (System/currentTimeMillis) 1000))}}
-;          :meta {:db_table "auth_token"})
-;
-;
-;User
-;(meta @User)
-
-
-;(defmodel Group
-;                :fields {:name        {:type :char-field :verbose-name "组名" :max-length 30}
-;                         :users       {:type :many-to-many-field :verbose-name "组员" :model User}
-;                         :permissions {:type :text-field :verbose-name "权限"}}
-;                :meta {:db_table "auth_group"})
-
-;(defmodel Category
-;                ;; 咨询分类
-;                :fields {:parent {:type :foreignkey :verbose-name "上级" :model :self}
-;                         :tree_path {:type :char-field :verbose-name "分层级树" :max-length 200}
-;                         :name {:type :char-field :verbose-name "分类名称" :max-length 30}
-;                         :sort_order {:type :int-field :verbose-name "排序" :default 1}
-;                         :deleted_time {:type :pos-int-field :verbose-name "删除时间" :default 0}}
-;                :meta {:db_table "consultion_category"})
-;(meta @Category)
-;(defmodel Conversation
-;                ;; 咨询会话，每一次新咨询都会有一个新的会话
-;                :fields {:category {:type :foreignkey :verbose-name "上级" :blank? true :null? true :model Category}
-;                         ;:user {:type :foreignkey :verbose-name "咨询人" :model User}
-;                         :lawyer_last_reply_time {:type :pos-int-field :verbose-name "律师最后回复时间" :default 0}
-;                         :solve_time {:type :pos-int-field :verbose-name "解决时间" :default 0}
-;                         :lawyer_last_read_time {:type :int-field :verbose-name "律师看问题的时间" :default 1}
-;                         :user_last_read_time {:type :int-field :verbose-name "用户看问题答案的时间" :default 1}
-;                         ; 表示为评价
-;                         :rate {:type :tiny-int-field :verbose-name "用户评价" :default 0}
-;                         :created {:type :pos-int-field :verbose-name "创建时间" :default #(quot (System/currentTimeMillis) 1000)}
-;                         :last_modified {:type :pos-int-field :verbose-name "创建时间" :default #(quot (System/currentTimeMillis) 1000)}
-;                         :deleted_time {:type :pos-int-field :verbose-name "删除时间" :default 0}}
-;                :meta {:db_table "consultion_conversation"})
 
 
 (defn get-model-primary-key
   [model]
   (:primary-key (meta model)))
-
-
 
 
 
@@ -672,20 +574,14 @@
 
 
 
-
 (defn get-foreignkey-field-db-column
   "获取foreignkey字段对应的db column
   如果当前没有这个foreignkey字段，那么可能是one2many的字段，从foreignkey model中来取对应字段
   "
   [model foreignkey-field field]
-  (println "model:" model)
-  (println foreignkey-field)
-  (println field)
-  (println (get-in model [foreignkey-field :model]))
   (if (= :self (get-in model [foreignkey-field :model]))
     (get-in model [field :db_column])
-    (let [f-model @(get-model (get-in model [foreignkey-field :model]))
-          _ (println f-model)
+    (let [f-model (get-in model [foreignkey-field :model])
           c (get-in f-model [field :db_column])]
       (if c
         c
@@ -693,10 +589,6 @@
           ; 如果没有，那么就从one2many中拿
           (if-let [f-model (get-in m-data [:one2many foreignkey-field :model])]
             (get-field-db-column f-model field)))))))
-
-
-
-;(get-foreignkey-field-db-column @Token :user :true_name)
 
 
 
@@ -721,13 +613,7 @@
   [from-where-or-select-or-nil join-model-db-name foreignkey-field alias is-field-allow-null?]
   "
   [model *tables from foreignkey-field join-model-db-name]
-  ;(println "foreignkey-field:" foreignkey-field "join-model-db-name:" join-model-db-name)
   (let [tables @*tables a (get-in tables [:tables join-model-db-name]) c (inc (:count tables)) null? (get-in model [foreignkey-field :null?])]
-
-    (println "\n\n\n")
-    (println "aaa:" a "f:" foreignkey-field)
-    (println "\n\n\n")
-
     (cond
       (nil? a)
       (do
@@ -742,13 +628,6 @@
       :else
       [nil join-model-db-name foreignkey-field (get-in tables [:tables join-model-db-name foreignkey-field]) null?])))
 
-;(let [*tables (atom {:tables {"auth_token" {}} :count 1})]
-;  (println (get-foreignkey-table @Token *tables :fields :user "auth_user"))
-;  (println (get-foreignkey-table @Token *tables :fields :user "auth_user"))
-;  (println (get-foreignkey-table @Token *tables :fields :user "auth_user"))
-;
-;  (println @*tables)
-;  )
 
 
 (defn get-foreignkey-model-db-name
@@ -760,16 +639,12 @@
   返回foreignkey类型 和对应的字段db
   "
   [model foreignkey-field]
-  (let [f-model @(get-model (get-in model [foreignkey-field :model]))
+
+  (let [f-model (get-in model [foreignkey-field :model])
         m-data (meta model)
         one2many-model (get-in m-data [:one2many foreignkey-field :model])
-        be-many2many-model (get-in m-data [:many2many foreignkey-field :model])
-        ]
-    ;(println "f-model:" f-model)
-    ;(println "foreignkey-field:" foreignkey-field)
-    ;(println m-data)
-    ;(println one2many-model)
-    ;(println be-many2many-model)
+        be-many2many-model (get-in m-data [:many2many foreignkey-field :model])]
+
     (cond
       ; foreignkey to self
       (= f-model :self)
@@ -784,17 +659,8 @@
       (= :many-to-many-field (get-in model [foreignkey-field :type]))
       [:many-to-many]
       :else
-      (do
-        ;(println "else:")
-        ;(println (type f-model))
-        [:field (get-model-db-name f-model)]))))
+      [:field (get-model-db-name f-model)])))
 
-;(get-model-db-name @User)
-;(get-foreignkey-model-db-name @Token :user)
-;
-;@User
-;
-;(get-in @Token [:user :model])
 
 
 (defn get-many-to-many-table
@@ -814,8 +680,7 @@
         (swap! *tables assoc :count c)
         [from be-many-model-db foreignkey-field (str "T" c) true])
       :else
-      [nil be-many-model-db foreignkey-field (get-in tables [:tables be-many-model-db foreignkey-field]) true])
-    ))
+      [nil be-many-model-db foreignkey-field (get-in tables [:tables be-many-model-db foreignkey-field]) true])))
 
 
 
@@ -830,11 +695,6 @@
         (swap! *tables update-in [:tables be-many-model-db] assoc foreignkey-field nil)
         (swap! *tables assoc :count c)
         [from be-many-model-db foreignkey-field nil true])
-      ;(not (contains? a foreignkey-field))
-      ;(do
-      ;  (swap! *tables update-in [:tables be-many-model-db] assoc foreignkey-field (str "T" c))
-      ;  (swap! *tables assoc :count c)
-      ;  [from be-many-model-db foreignkey-field (str "T" c) true])
       :else
       [nil be-many-model-db foreignkey-field (get-in tables [:tables be-many-model-db foreignkey-field]) true])))
 
@@ -872,13 +732,12 @@
 
 
 (defn get-field-db-name
+  "根据:user.id :name 之类的转换为数据库字段"
   [model k & {:keys [*join-table *tables from]}]
   (let [k_name (name k) model-db-table (get-model-db-name model)
         [_ foreingnkey-field-name link-table-field] (re-find #"([\w-]+)\.([\w-]+)" k_name)
         foreignkey-field (keyword foreingnkey-field-name)
         link-table-field (keyword link-table-field)]
-    (println "foreingnkey-field-name:" foreignkey-field)
-    (println "link-field-name:" link-table-field)
     (cond
       ; many-to-many-field
       (and foreignkey-field (= :many-to-many-field (get-in model [foreignkey-field :type])))
@@ -910,19 +769,14 @@
 
       ; foreignkey id
       (and foreignkey-field link-table-field (= link-table-field :id) *join-table *tables)
-      (get-field-db-column model foreignkey-field)
+      (str model-db-table "." (get-field-db-column model foreignkey-field))
 
       ; foreignkey
       (and foreignkey-field link-table-field *join-table *tables)
-      (let [_ (check-model-field model foreignkey-field)
-            [r-type join-model-db-name] (get-foreignkey-model-db-name model foreignkey-field)
-            _ (println "join-model-db-name:" join-model-db-name)
-            _ (println "foreignkey-field:" from foreignkey-field)
+      (let [[r-type join-model-db-name] (get-foreignkey-model-db-name model foreignkey-field)
             join-table (get-foreignkey-table model *tables from foreignkey-field join-model-db-name)
-            _ (println "6666:" join-table)
             ; 处理数据库别名问题
             join-model-db-name (if-let [table-alias (get join-table 3)] table-alias (get join-table 1))]
-        (println "join-table:" from join-table)
         (if (and (= :id link-table-field) (not= r-type :one2many))
           (str model-db-table "." (get-field-db-column model foreignkey-field))
           (do
@@ -932,7 +786,6 @@
                                           " = " join-model-db-name "."
                                           (get-foreignkey-to-field-db-column model foreignkey-field)
                                           )])
-            (println "jjjbbbccc:")
             (str join-model-db-name "." (get-foreignkey-field-db-column model foreignkey-field link-table-field)))))
       :else
       (do
@@ -1076,25 +929,21 @@
                             ; 如果是vector或list进行单独的处理
                             (parse-sql-func v)
                             ; 否则就是普通的值, 直接等于即可
-                            ["= ?" v]
-                            )
+                            ["= ?" v])
                           conj-func (if (or (vector? new-val) (seq? new-val))
                                       #(apply conj %1 %2)
                                       conj)]
                       (-> r
-                          (update-in [0] conj (str (get-field-db-name model k :*join-table *join-table :*tables *tables :from :where) s-type
-                                                   ))
+                          (update-in [0] conj (str (get-field-db-name model k :*join-table *join-table :*tables *tables :from :where) s-type))
                           (update-in [1] conj-func new-val))))
                   [[] []]
-                  (partition 2 where-condition)
-                  )
+                  (partition 2 where-condition))
           (reduce (fn [r where-condition2]
                     (let [[fields-str2 vals2 join-table] (get-where-query model where-condition2 *tables)]
                       (swap! *join-table into join-table)
                       (-> r
                           (update-in [0] conj (str "(" fields-str2 ")"))
-                          (update-in [1] #(apply conj %1 %2) vals2))
-                      ))
+                          (update-in [1] #(apply conj %1 %2) vals2))))
                   [[] []]
                   where-condition))]
     (if (seq fields)
@@ -1103,8 +952,7 @@
           (if (> (count fields) 1)
             (throw (Exception. (str "not operation only can contains one collection. (not [:id 1 :headline \"xxx\"]) "
                                     fields " has " (count fields) " ."))))
-          [(str "not (" (clojure.string/join " " fields) ")") vals @*join-table]
-          )
+          [(str "not (" (clojure.string/join " " fields) ")") vals @*join-table])
         [(clojure.string/join (str " " op " ") fields) vals @*join-table]))))
 
 
@@ -1128,23 +976,11 @@
                  ; 一种字段是有中括号，表示有别名
                  (let [[k0 k1] k]
                    ; 如果别名中有1就进行报错
-                   (str (get-field-db-name model k0 :*join-table *join-table :*tables *tables :from :fields) " as " (infix-alias k1))
-                   )))
+                   (str (get-field-db-name model k0 :*join-table *join-table :*tables *tables :from :fields) " as " (infix-alias k1)))))
              fields)
        @*join-table])
     ; 处理为每个字段
     [(mapv #(get-field-db-name model %) (:fields (meta model))) nil]))
-
-;(let [*tables (atom {:tables {"auth_token" {}} :count 1})]
-;  (get-select-fields-query @Token [:user.true_name :user.no] *tables)
-;  )
-
-
-;(let [*tables (atom {:tables {"auth_token" {}} :count 1}) *join-table (atom [])]
-;  (get-field-db-name @Token :user.true_name :*join-table *join-table :*tables *tables :from :fields)
-;  (println @*tables)
-;  (println @*join-table)
-;  )
 
 
 
@@ -1234,6 +1070,8 @@
 
 
 
+
+
 (defn insert!
   "insert the data into the database."
   [model & {:keys [debug? only-sql? clean-data?] :or {debug? false clean-data? true remove-pk? true} :as all}]
@@ -1272,12 +1110,8 @@
 
 (defn update!*
   [model {values :values where-condition :where clean-data? :clean-data? :or {clean-data? true}}]
-  (println "values:" values)
-  (let [;model @(get-model model)
-        model-db-name (get-model-db-name model)
+  (let [model-db-name (get-model-db-name model)
         *tables (atom {:tables {model-db-name {}} :count 1})
-        ;values (if (symbol? values) (get-model values) values)
-        ;where-condition (if (symbol? where-condition) (get-model where-condition) where-condition)
         [fields-str fields-values] (get-update!-fields-query model values)
         [where-query-str values where-join-table] (get-where-query model where-condition *tables)
         where-query-str (if where-query-str (str "where " where-query-str))
@@ -1323,23 +1157,33 @@
 
 
 
+(defn get-order-query
+  "把 :order-by [:id \"ASC\"] 转换为order by sql"
+  [model order-by *tables]
+  (if (seq order-by)
+    (let [*join-table (atom [])]
+      [(mapv
+         (fn [[k v]]
+           (str (get-field-db-name model k :*join-table *join-table :*tables *tables :from :where) " " v))
+         (partition 2 order-by)) @*join-table])))
+
+
+
 (defn select*
-  [model {fields-list :fields aggregate-fields :aggregate annotate-fields :annotate where-condition :where group-by :group-by limit :limit}]
+  [model {fields-list :fields aggregate-fields :aggregate annotate-fields :annotate where-condition :where group-by :group-by order-by :order-by limit :limit}]
   (let [
         model-db-name (get-model-db-name model)
         *tables (atom {:tables {model-db-name {}} :count 1})
         [where-query-str values where-join-table] (get-where-query model where-condition *tables)
-
+        [order-by-strs order-by-join-table] (get-order-query model order-by *tables)
         [fields-strs field-join-table] (if aggregate-fields
                                          [(get-aggregate-fields-query model aggregate-fields)]
                                          (get-select-fields-query model fields-list *tables))
 
         [annotate-strs annotate-join-table group-by2] (if annotate-fields (get-annotate-query model annotate-fields *tables))
         group-str (if group-by2 group-by2 (parse-group-by model group-by))
-
         fields-join-query-strs (get-join-table-query (concat field-join-table annotate-join-table))
-        where-join-query-strs (get-join-table-query where-join-table)
-
+        where-join-query-strs (get-join-table-query (concat where-join-table order-by-join-table))
         sql (str "select " (clojure.string/join ", " (concat fields-strs annotate-strs)) " from " model-db-name
                  (when (seq fields-join-query-strs)
                    (str " " (clojure.string/join " " fields-join-query-strs)))
@@ -1347,10 +1191,12 @@
                    (str " " (clojure.string/join " " where-join-query-strs)))
                  (when (and where-query-str (not= "" where-query-str))
                    (str " where " where-query-str))
-                 (when limit
-                   (str " " limit))
                  (when group-str
-                   (str " group by " (clojure.string/join ", " group-str))))]
+                   (str " group by " (clojure.string/join ", " group-str)))
+                 (when order-by-strs
+                   (str " order by " (clojure.string/join ", " order-by-strs)))
+                 (when limit
+                   (str " " limit)))]
     (into [sql] (filter #(not (nil? %)) values))))
 
 
@@ -1380,10 +1226,32 @@
 
 
 
+(defn get-or-insert!
+  "get a item, if not find, insert a new row in the specified table
+ 查找复核条件的数据，如果找不到，那么就创建它
+ "
+  [model & {:keys [debug? only-sql? values where clean-data?] :or {clean-data? true} :as all}]
+  (if (empty? where)
+    (throw (Exception. " :where must have")))
+  (if (empty? values)
+    (throw (Exception. " :values must have")))
+  (let [query-vec (select* @model (assoc all :limit "limit 1"))
+        connection (db-connection)
+        [insert-data db-table-name] (insert!* @model all)
+        db-table (keyword db-table-name)]
+
+
+    (let [result (first (jdbc/query connection query-vec))]
+      (if (not result)
+        (let [[vid] (jdbc/insert! connection db-table insert-data)]
+          (assoc result :id vid))
+        result))))
+
+
+
 (defn delete!*
   [model {where-condition :where}]
-  (let [;model @(get-model model)
-        model-db-name (get-model-db-name model)
+  (let [model-db-name (get-model-db-name model)
         *tables (atom {:tables {model-db-name {}} :count 1})
         [where-query-str values where-join-table] (get-where-query model where-condition *tables)
         where-query-str (if where-query-str (str "WHERE " where-query-str))
