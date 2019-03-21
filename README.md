@@ -40,6 +40,9 @@ And I Just test mysql 5.7.20 now, It will support more database later.
              }})
 ```
 
+or save the config to file settings.edn, laniu will auto load the config data and connection.
+
+
 ### Multiple databases
 This setting maps database aliases, which are a way to refer to a specific database throughout query, to a dictionary of settings for that specific connection. 
 ``` clojure
@@ -192,24 +195,14 @@ When you define a model, the defmodel will auto define a data spec, when you ins
 ``` clojure
 (insert! reporter :values {:full_name2 "chris"})
 ;=>
-#:clojure.spec.alpha{:problems ({:path [],
-                                 :pred (clojure.core/fn [%] (clojure.core/contains? % :full_name)),
-                                 :val {:full_name2 "chris"},
-                                 :via [:laniu.core/reporter],
-                                 :in []}),
-                     :spec :laniu.core/reporter,
-                     :value {:full_name2 "chris"}}
+{:full_name2 "chris"} - failed: (contains? % :full_name) spec: :laniu.core-test/reporter
+
 
 
 (insert! category :values {:name "Flower" :sort_order "a"})
-=>
-#:clojure.spec.alpha{:problems ({:path [:sort_order],
-                                 :pred clojure.core/int?,
-                                 :val "a",
-                                 :via [:laniu.core/category :laniu.core.category/sort_order],
-                                 :in [:sort_order]}),
-                     :spec :laniu.core/category,
-                     :value {:name "Flower", :sort_order "a"}}
+;=>
+"a" - failed: int? in: [:sort_order] at: [:sort_order] spec: :laniu.core-test.category/sort_order
+
 ```
 
 ### field with choices valid
@@ -227,16 +220,9 @@ When you define a model, the defmodel will auto define a data spec, when you ins
          :values {:first-name "Edison"
                   :last-name  "Rao"
                   :gender     4})
-=>
-#:clojure.spec.alpha{:problems ({:path [:gender],
-                                 :pred (clojure.core/fn
-                                        [%]
-                                        (clojure.core/contains? {0 "uninput", 1 "Male", 2 "Female"} %)),
-                                 :val 4,
-                                 :via [:laniu.core/user :laniu.core.user/gender],
-                                 :in [:gender]}),
-                     :spec :laniu.core/user,
-                     :value {:first-name "Edison", :last-name "Rao", :gender 4}}
+;=>
+4 - failed: (contains? {0 "uninput", 1 "Male", 2 "Female"} %) in: [:gender] at: [:gender] spec: :laniu.core-test.user/gender
+
 
 ```
 ### insert multi rows

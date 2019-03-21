@@ -16,6 +16,115 @@
              :use-ssl       false}})
 
 
+(defmodel reporter
+          :fields {:full_name {:type :char-field :max-length 70}}
+          :meta {:db_table "ceshi_reporter"})
+
+
+(defmodel category
+          :fields {:name       {:type :char-field :max-length 30}
+                   :sort_order {:type :int-field :default 0}}
+          :meta {:db_table "ceshi_category"})
+
+(defmodel article
+          :fields {:headline   {:type :char-field :max-length 200}
+                   :content    {:type :text-field}
+                   :view_count {:type :int-field :default 0}
+                   :reporter   {:type :foreignkey :model reporter :on-delete :cascade}
+                   :category   {:type :foreignkey :model category :on-delete :set-null :blank true}
+                   :created    {:type :int-field :default #(quot (System/currentTimeMillis) 1000)}}
+          :meta {:db_table "ceshi_article"})
+
+(defmodel tree
+          :fields {:name       {:type :char-field :max-length 30}
+                   :parent     {:type :foreignkey :model :self}
+                   :sort-order {:type :int-field :default 0}
+                   })
+
+(insert! reporter :values {:full_name "edison"})
+(insert! reporter :values {:full_name "chris"})
+
+(insert! category :values {:name "Fun" :sort_order 3} :debug? true)
+(insert! article
+         :values {:headline "just a test"
+                  :content  "hello world"
+                  :reporter 45
+                  :category 11})
+
+
+(insert-multi! article
+               :values [{:headline "Apple make a phone"
+                         :content  "bala babla ...."
+                         :reporter 46
+                         :category 9}
+                        {:headline "A good movie recommend"
+                         :content  "bala babla ...."
+                         :reporter 45
+                         :category 10}
+                        {:headline "A funny joke"
+                         :content  "bala babla ...."
+                         :reporter 46
+                         :category 11}
+                        ])
+
+(insert! reporter :values {:full_name2 "chris"})
+
+
+(insert! category :values {:name "Flower" :sort_order "a"})
+
+
+(defmodel user
+          :fields {
+                   :first-name {:type :char-field :verbose-name "First name" :max-length 30}
+                   :last-name  {:type :char-field :verbose-name "Last name" :max-length 30}
+                   :gender     {:type :tiny-int-field :verbose-name "Gender" :choices [[0, "uninput"], [1, "Male"], [2, "Female"]] :default 0}
+                   :created    {:type :int-field :verbose-name "Created" :default #(quot (System/currentTimeMillis) 1000)}
+                   })
+
+(meta @user)
+
+@user
+
+
+(update! article
+         :values {:view_count ('+ :view_count 10)} :debug? true)
+
+(update! article
+         :values {:view_count ['+ :view_count 10]} :debug? true)
+
+
+(def a 10)
+
+(update! article
+         :values {:view_count `(+ :view_count ~a)} :debug? true)
+
+(select article)
+
+
+(create-table user :debug? true)
+
+(insert! user
+         :values {:first-name "Edison"
+                  :last-name  "Rao"
+                  :gender     1} :debug? true)
+
+(update! reporter
+         :values {:full_name "Edison Rao"}
+         :where [:id 45])
+
+(update! reporter
+         :values {:full_name "Chris Zheng"}
+         :where [:id 46 :full_name "chris"]
+         :debug? true)
+
+(update! article
+         :values {:reporter 1}
+         :where [:category.name "IT"])
+
+(update! article
+         :values {:category 9 :reporter 45}
+         :where [:id 7])
+
 (defdb
   {:default {:adapter       "mysql"
              :username      "root"

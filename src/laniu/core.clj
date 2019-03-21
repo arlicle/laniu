@@ -348,6 +348,15 @@
                                       (if (seq b) b [a]))) "_" model-name) #"\-" "_")))
 
 
+(defn infix-alias
+  [k]
+  (let [alias (name k)]
+    (if (re-seq #"\-" alias)
+      (clojure.string/replace alias #"-" "_")
+      alias)))
+
+
+
 (defn optimi-model-fields
   "index more db field data from field type
   a primary key field will automatically be added to model if you don’t specify otherwise.
@@ -362,11 +371,11 @@
                                       (case (:type v)
                                         :foreignkey
                                         (if (= :self (:model v))
-                                          (merge default {:db_column (str (name k) "_id") :to_field :id :related-key (model-name-to-key model-name)} v)
+                                          (merge default {:db_column (str (infix-alias k) "_id") :to_field :id :related-key (model-name-to-key model-name)} v)
                                           (merge default {:db_column (str (name k) "_id") :to_field :id :related-key (model-name-to-key model-name)} v {:model @(get-model (:model v))}))
                                         :many-to-many-field
-                                        (merge default {:through-db (str model_db_name "_" (name k)) :through-field-columns [(clojure.string/lower-case (str model-name "_id")) (clojure.string/lower-case (str (:model v) "_id"))] :related-key (model-name-to-key model-name)} v {:model @(get-model (:model v))})
-                                        (merge default {:db_column (name k)} v)
+                                        (merge default {:through-db (str model_db_name "_" (infix-alias k)) :through-field-columns [(clojure.string/lower-case (str model-name "_id")) (clojure.string/lower-case (str (:model v) "_id"))] :related-key (model-name-to-key model-name)} v {:model @(get-model (:model v))})
+                                        (merge default {:db_column (infix-alias k)} v)
                                         ))
                              ) {} fields)]
     (if (not @*primary_key)
@@ -825,6 +834,12 @@
 
 
 
+(defn op-func2str
+  [f]
+  (last (clojure.string/split (str f) #"/")))
+
+
+
 (defn infix
   "trans (+ 1 2) to (1 + 2)
   or (* 4 (+ 3 2)) to \"(4*(3+2))\"
@@ -846,7 +861,7 @@
                          :else
                          x
                          )) elements)]
-     (format "(%s)" (clojure.string/join "" (interpose op elements))))))
+     (format "(%s)" (clojure.string/join "" (interpose (op-func2str op) elements))))))
 
 
 
@@ -867,23 +882,18 @@
   (let [new-data (clean-data model data)
         [r-fields r-vals]
         (reduce (fn [r [k v]]
-                  (if (list? v)
+                  (if (coll? v)
                     (let [[k2 v2] (infix model v)]
                       (-> r
                           (update-in [0] conj (str (get-field-db-name model k) "=" k2))
-                          (update-in [1] into v2)
-                          )
-                      )
+                          (update-in [1] into v2)))
                     (-> r
                         (update-in [0] conj (str (get-field-db-name model k) "=?"))
-                        (update-in [1] conj v)
-                        )
-                    )
-                  )
+                        (update-in [1] conj v))))
                 [[] []]
-                new-data
-                )]
+                new-data)]
     [(clojure.string/join "," r-fields) r-vals]))
+
 
 
 
@@ -925,7 +935,7 @@
         (if (keyword? (first where-condition))
           (reduce (fn [r [k v]]
                     (let [[s-type new-val]                  ;查询类型
-                          (if (or (vector? v) (seq? v))
+                          (if (or (list? v) (vector? v))
                             ; 如果是vector或list进行单独的处理
                             (parse-sql-func v)
                             ; 否则就是普通的值, 直接等于即可
@@ -956,12 +966,7 @@
         [(clojure.string/join (str " " op " ") fields) vals @*join-table]))))
 
 
-(defn infix-alias
-  [k]
-  (let [alias (name k)]
-    (if (re-seq #"\-" alias)
-      (clojure.string/replace alias #"-" "_")
-      alias)))
+
 
 
 
