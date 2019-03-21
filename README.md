@@ -81,6 +81,10 @@ The more detail about the database connection config is here [https://github.com
 ### define a model
 ``` clojure
 
+(defmodel Publisher
+          :fields {:name {:type :char-field :max-length 60}}
+          :meta {:db_table "ceshi_publisher"})
+
 (defmodel reporter
           :fields {:full_name {:type :char-field :max-length 70}}
           :meta {:db_table "ceshi_reporter"})
@@ -280,16 +284,22 @@ When you define a model, the defmodel will auto define a data spec, when you ins
 
 ``` clojure
 (update! article
-         :values {:view_count (+ :view_count 10)})
+         :values {:view_count `(+ :view_count 10)})
 
 (def a 30)
 (update! article
-         :values {:view_count (* :view_count a)}
+         :values {:view_count `(* :view_count ~a)}
          :where [:id 7])
+or
+
+(update! article
+         :values {:view_count [`* :view_count a]}
+         :where [:id 7])
+
 
 ; update with more complex raq sql
 (update! article 
-         :values {:view_count (rawsql "view_count+id")}
+         :values {:view_count `(rawsql "view_count+id")}
          :debug? true)
 ["update ceshi_article set ceshi_article.view_count=(view_count+id) "]
 
@@ -298,6 +308,7 @@ When you define a model, the defmodel will auto define a data spec, when you ins
 ### update or insert
 ``` clojure
 (update-or-insert! Publisher :values {:name "Yunnan"} :where [:id 1])
+; {:update-count 1}
 ```
 
 

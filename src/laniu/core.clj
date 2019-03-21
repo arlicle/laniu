@@ -899,6 +899,7 @@
 
 (defn check-where-func
   [op]
+  (println (type op))
   (if (not (contains? #{'or 'and 'not} op))
     (throw (Exception. (str "() must first of function 'or'/'and'/'not', " op " is not valid."))))
   true)

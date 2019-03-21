@@ -86,6 +86,33 @@
 @user
 
 
+(def a 30)
+(update! article
+         :values {:view_count [`* :view_count a]}
+         :where [:id 7])
+
+
+(update! article
+         :values {:view_count `(rawsql "view_count+id")}
+         :debug? true)
+
+(update! reporter
+         :values {:full_name "Chris Zheng"}
+         :where [:id 46 :full_name "chris"]
+         :debug? true)
+
+(update! article
+         :values {:reporter 1}
+         :where [:category.name "IT"])
+
+(update! article
+         :values {:category 9 :reporter 45}
+         :where [:id 7])
+
+(update! article
+         :values {:view_count `(+ :view_count 10)})
+
+
 (update! article
          :values {:view_count ('+ :view_count 10)} :debug? true)
 
@@ -99,6 +126,28 @@
          :values {:view_count `(+ :view_count ~a)} :debug? true)
 
 (select article)
+
+
+
+(insert-multi! article
+               :values [{:headline "Apple make a phone"
+                         :content  "bala babla ...."
+                         :reporter 46
+                         :category 9}
+                        {:headline "A good movie recommend"
+                         :content  "bala babla ...."
+                         :reporter 45
+                         :category 10}
+                        {:headline "A funny joke"
+                         :content  "bala babla ...."
+                         :reporter 46
+                         :category 11}
+                        ])
+
+
+(update! reporter
+         :values {:full_name "Edison Rao"}
+         :where [:id 45])
 
 
 (create-table user :debug? true)
@@ -156,8 +205,38 @@
           :fields {:name {:type :char-field :max-length 60}}
           :meta {:db_table "ceshi_publisher"})
 
+
+(update-or-insert! Publisher :values {:name "Hello world"} :where [:id 300])
+
+
+(select category)
+
 (select Publisher)
 
+
+(select category
+        :fields [:id :name]
+        :where [:name "IT"]
+        )
+
+(select category
+        :fields [:id [:name :category_name]]
+        :where [:name "IT"]
+        :debug? true
+        )
+
+(select article
+        :fields [:id :headline :category.name :reporter.full_name]
+        :where [:category.name "IT" :reporter.full_name "Edison Rao"]
+        :debug? true
+        )
+
+
+(select article
+        :fields [:id :headline :category.name :reporter.full_name]
+        :where `(and :category.name "IT" :reporter.full_name "Edison Rao")
+        :debug? true
+        )
 
 
 (meta @*current-pooled-dbs)
