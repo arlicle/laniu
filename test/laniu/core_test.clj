@@ -141,6 +141,26 @@
 
 (select Author :where [:book.name "Living Clojure"] :debug? true)
 
+(select article
+        :where `[:id (in [6 7 8 9])]
+        :debug? true)
+
+
+laniu.core-test/in
+(select Author :annotate ['(count :book)] :debug? true)
+(select Author :annotate [`(count :book)] :debug? true)
+(select Author :annotate `[(count :book)] :debug? true)
+(select Book :annotate [`(count :authors)] :debug? true)
+
+(select article
+        :where [:id (> 7)])
+
+(select article
+        :where [:id (not= 7)]
+        :debug? true)
+(select article
+        :where [:id `(in [6 7 8])]
+        :debug? true)
 
 
 

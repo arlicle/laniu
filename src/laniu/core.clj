@@ -905,7 +905,7 @@
 
 
 
-(defn check-where-func
+(defn check-field-func
   [op]
   (case (str op)
     ("or" "clojure.core/or")
@@ -914,26 +914,32 @@
     "and"
     ("not" "clojure.core/not")
     "not"
-    (throw (Exception. (str "() must first of function 'or'/'and'/'not', " op " is not valid.")))))
+    ("count" "clojure.core/count")
+    "count"
+    (op-func2str (str op))
+    ;(throw (Exception. (str "() must first of function 'or'/'and'/'not', " op " is not valid.")))
+    ))
 
 
 
 (defn parse-sql-func
   [[func-name v args]]
-  (case func-name
-    > [" > ?" v]
-    >= [" >= ?" v]
-    < [" < ?" v]
-    <= [" <= ?" v]
-    not= [" <> ?" v]
-    rawsql [(str " " v) args]
-    startswith [" like ?" (str v "%")]
-    nil? [(if v
-            " IS NULL "
-            " IS NOT NULL "
-            ) nil]
-    (in :in) [(str " in " "(" (clojure.string/join "," (repeat (count v) "?")) ")") v]
-    [" **** " " none "]))
+  (println "func-name:" func-name)
+  (let [func-str (check-field-func func-name)]
+    (case func-str
+      ">" [" > ?" v]
+      ">=" [" >= ?" v]
+      "<" [" < ?" v]
+      "<=" [" <= ?" v]
+      "not=" [" <> ?" v]
+      "rawsql" [(str " " v) args]
+      "startswith" [" like ?" (str v "%")]
+      "nil?" [(if v
+              " IS NULL "
+              " IS NOT NULL "
+              ) nil]
+      ("in" :in) [(str " in " "(" (clojure.string/join "," (repeat (count v) "?")) ")") v]
+      [" **** " " none "])))
 
 
 
@@ -942,13 +948,15 @@
   (let [[op where-condition] (if (seq? where-condition)
                                [(first where-condition) (rest where-condition)]
                                ['and where-condition])
-        op (check-where-func op)
+        op (check-field-func op)
+        _ (println "op::: " op)
         *join-table (atom [])
         [fields vals]
         (if (keyword? (first where-condition))
           (reduce (fn [r [k v]]
+                    (println "vvvv:" v (seq? v) (list? v) (vector? v))
                     (let [[s-type new-val]                  ;查询类型
-                          (if (or (list? v) (vector? v))
+                          (if (or (seq? v) (list? v) (vector? v))
                             ; 如果是vector或list进行单独的处理
                             (parse-sql-func v)
                             ; 否则就是普通的值, 直接等于即可
@@ -1052,19 +1060,26 @@
 
 (defn get-annotate-query
   [model fields *tables]
+  (println "fields:" fields)
   (let [*join-table (atom [])
         group-by [(get-field-db-name model (get-model-primary-key model))]]
     [(mapv
        (fn [item]
+         (println "item:" (seq? item) (coll? item) item)
          (cond
-           (list? item)
-           (let [[op key] item]
+           (or (list? item) (seq? item))
+           (let [[op key] item op (check-field-func op)]
+             (println "op:" op)
              (str op "(" (get-field-db-name model (get-annotate-key key) :*join-table *join-table :*tables *tables :from :annotate) ") as " op "__" (name key))
              )
            (and (vector? item) (list? (first item)) (keyword? (second item)))
            (let [[[op key] alias] item]
+             (println "hahahah")
              (str op "(" (get-field-db-name model (get-annotate-key key) :*join-table *join-table :*tables *tables :from :annotate) ")" (if alias (str " as " (name alias))))
-             )))
+             )
+           :else
+           (println (type item) "jjjjj")
+           ))
        fields)
      @*join-table group-by]))
 
