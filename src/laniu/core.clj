@@ -1019,8 +1019,6 @@
 (defn get-aggregate-alias
   "fix the count *"
   [k]
-  (println "000:" (str k))
-  (println (= (str k) "clojure.core/*"))
   (if (not (#{"*" "clojure.core/*"} (str k)))
     (str "__" (name k))))
 
@@ -1038,17 +1036,12 @@
                                (cons (str " as " (check-field-func (first item)) (get-aggregate-alias (second item))) item))
                  op (check-field-func op)
                  k (if (keyword? k) k (check-field-func k))
-                 _ (println "kkk::" as-k)
-                 _ (println "jjjj:" item)
-                 _ (println (first item))
-                 _ (println "kjkj:" k)
                  k2 (cond (keyword? k)
                           (get-field-db-name model k)
                           (= '* k)
                           "*"
                           :else
                           (a-func k true))]
-             (println "k2k2k2:" k2)
              (if (nil? x)
                (str op "(" k2 ")" as-k)
                (str op "(" k2 ")")))))
@@ -1066,23 +1059,17 @@
 
 (defn get-annotate-query
   [model fields *tables]
-  (println "fields:" fields)
   (let [*join-table (atom [])
         group-by [(get-field-db-name model (get-model-primary-key model))]]
     [(mapv
        (fn [item]
-         (println (type item) (seq? item) (type (first item)))
          (cond
            (seq? item)
            (let [[op key] item op (check-field-func op)]
-             (println "op:" op "key" key)
-             (str op "(" (get-field-db-name model (get-annotate-key key) :*join-table *join-table :*tables *tables :from :annotate) ") as " op "__" (name key))
-             )
+             (str op "(" (get-field-db-name model (get-annotate-key key) :*join-table *join-table :*tables *tables :from :annotate) ") as " op "__" (name key)))
            (and (vector? item) (seq? (first item)) (keyword? (second item)))
            (let [[[op key] alias] item op (check-field-func op)]
-             (println "op:::" op "key" key "alias::" alias)
-             (str op "(" (get-field-db-name model (get-annotate-key key) :*join-table *join-table :*tables *tables :from :annotate) ")" (if alias (str " as " (name alias))))
-             )))
+             (str op "(" (get-field-db-name model (get-annotate-key key) :*join-table *join-table :*tables *tables :from :annotate) ")" (if alias (str " as " (name alias)))))))
        fields)
      @*join-table group-by]))
 
@@ -1103,8 +1090,6 @@
 
 
 (def insert!*-memoize (memoize insert!*))
-
-
 
 
 

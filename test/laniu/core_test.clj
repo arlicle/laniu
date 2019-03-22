@@ -3,17 +3,7 @@
             [laniu.core :refer :all]
             [laniu.db :refer :all]))
 
-(select category :where [:article.headline "ccc"] :debug? true)
 
-(select article
-        :fields [:id :headline :content :category.name :reporter.full_name]
-        :where [:category.name "IT" :reporter.full_name "Edison Rao"])
-
-(select article
-        :fields [:id :headline :content :category.name [:reporter.full_name :reporter_full_name]]
-        :where [:category.name "IT"])
-
-(meta @category)
 (defdb
   {:default {:adapter       "mysql"
              :username      "root"
@@ -121,6 +111,15 @@
 
 (create-table Author :only-sql? true)
 
+
+(defmodel reporter
+          :fields {:full_name {:type :char-field :max-length 70}}
+          :meta {:db_table "ceshi_reporter"})
+
+(defmodel Publisher
+          :fields {:name {:type :char-field :max-length 60}}
+          :meta {:db_table "ceshi_publisher"})
+
 (defmodel Book
           :fields {:name      {:type :char-field :max-length 60}
                    :pages     {:type :int-field}
@@ -203,9 +202,10 @@
 
 (select category :annotate [[`(count :article) :article_count]] :debug? true)
 
+(select category :annotate `[[(count :article) :article_count]] :debug? true)
 
 
-laniu.core-test/in
+
 (select Author :annotate ['(count :book)] :debug? true)
 (select Author :annotate [`(count :book)] :debug? true)
 (select Author :annotate `[(count :book)] :debug? true)
@@ -311,29 +311,26 @@ laniu.core-test/in
          :values {:category 9 :reporter 45}
          :where [:id 7])
 
-(defdb
-  {:default {:adapter       "mysql"
-             :username      "root"
-             :password      "123"
-             :database-name "projectx3"
-             :server-name   "localhost"
-             :port-number   3306
-             :engine        "InnoDB"
-             :charset       "utf8"
-             :use-ssl       false}})
+(comment
+  (defdb
+    {:default {:adapter       "mysql"
+               :username      "root"
+               :password      "123"
+               :database-name "projectx3"
+               :server-name   "localhost"
+               :port-number   3306
+               :engine        "InnoDB"
+               :charset       "utf8"
+               :use-ssl       false}}))
 
 
 (create-table reporter :only-sql? true)
 
-(defmodel reporter
-          :fields {:full_name {:type :char-field :max-length 70}}
-          :meta {:db_table "ceshi_reporter"})
+
 
 (create-table reporter :debug? true :only-sql? true)
 
-(defmodel Publisher
-          :fields {:name {:type :char-field :max-length 60}}
-          :meta {:db_table "ceshi_publisher"})
+
 
 (create-table Publisher :only-sql? true)
 

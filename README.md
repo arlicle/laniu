@@ -648,7 +648,7 @@ Returns the aggregate values (avg, sum, count, min, max), the aggregate field wi
 ```
 ### Annotate
 ``` clojure
-(select category :annotate [[(count :article) :article_count]] :debug? true)
+(select category :annotate `[[(count :article) :article_count]] :debug? true)
 ["select ceshi_category.name, ceshi_category.sort_order, ceshi_category.id, count(ceshi_article.id) as article_count from ceshi_category INNER JOIN ceshi_article ON (ceshi_category.id = ceshi_article.category_id) group by ceshi_category.id"]
 ```
 
