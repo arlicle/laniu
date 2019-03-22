@@ -569,32 +569,32 @@ CREATE TABLE `ceshi_book_authors` (
 ``` clojure
 ; select with function
 (select article
-        :where [:id (> 7)])
+        :where [:id `(> 7)])
 
 (select article
-        :where [:id (not= 7)]
+        :where [:id `(not= 7)]
         :debug? true)
-["select * from ceshi_article   where ceshi_article.id <> ?" 7]
+["select * from ceshi_article where ceshi_article.id <> ?" 7]
 
 (select article
-        :where [:id (in [6 7 8])]
+        :where [:id `(in [6 7 8])]
         :debug? true)
-["select * from ceshi_article   where ceshi_article.id in (?,?,?)" 6 7 8]
+["select * from ceshi_article where ceshi_article.id in (?,?,?)" 6 7 8]
 
 (select article
-        :where [:headline (startswith "a")]
+        :where [:headline `(startswith "a")]
         :debug? true)
-["select * from ceshi_article   where ceshi_article.headline like ?" "a%"]
+["select * from ceshi_article where ceshi_article.headline like ?" "a%"]
 
 ; you can also use original sql function with rawsql
 (select article
-        :where [:id (rawsql "in (6,7,8)")]
+        :where [:id `(rawsql "in (6,7,8)")]
         :debug? true)
 ["select * from ceshi_article where ceshi_article.id in (6,7,8)"]
 
 ; or 
 (select article
-        :where [:id (rawsql "in (?,?,?)" [6 7 8])]
+        :where [:id `(rawsql "in (?,?,?)" [6 7 8])]
         :debug? true)
 ["select * from ceshi_article where ceshi_article.id in (?,?,?)" 6 7 8]
 ```
@@ -615,14 +615,14 @@ Returns the aggregate values (avg, sum, count, min, max), the aggregate field wi
 
 ``` clojure
 (select article
-           :aggregate [(count :id) (max :view_count) (min :view_count) (avg :view_count) (sum :view_count)]
+           :aggregate `[(count :id) (max :view_count) (min :view_count) (avg :view_count) (sum :view_count)]
            :debug? true)
 ["select count(ceshi_article.id) as count__id, max(ceshi_article.view_count) as max__view_count, min(ceshi_article.view_count) as min__view_count, avg(ceshi_article.view_count) as avg__view_count, sum(ceshi_article.view_count) as sum__view_count from ceshi_article  "]
 => ({:count__id 13, :max__view_count 600, :min__view_count 20, :avg__view_count 67.6923M, :sum__view_count 880M})
 
 ; with alias
 (select article
-        :aggregate [[(count :id) :count_id] [(max :view_count) :max_view_count]]
+        :aggregate `[[(count :id) :count_id] [(max :view_count) :max_view_count]]
         :debug? true)
 ["select count(ceshi_article.id) as count_id, max(ceshi_article.view_count) as max_view_count from ceshi_article"]
 => ({:count_id 13, :max_view_count 600})
@@ -633,7 +633,7 @@ Returns the aggregate values (avg, sum, count, min, max), the aggregate field wi
 
 ; Total number of books with publisher=BaloneyPress
 (select Book :where [:publisher.name "BaloneyPress"]
-        :aggregate [(count *)]
+        :aggregate `[(count *)]
         :debug? true
         )
 ["select count(*) as count from ceshi_book INNER JOIN ceshi_publisher ON (ceshi_book.publisher_id = ceshi_publisher.id) where ceshi_publisher.name= ?" "BaloneyPress"]
@@ -641,7 +641,7 @@ Returns the aggregate values (avg, sum, count, min, max), the aggregate field wi
 ; Average price across all books.
 
 (select Book
-        :aggregate [(avg :price)]
+        :aggregate `[(avg :price)]
         :debug? true
         )
 ["select avg(ceshi_book.price) as avg__price from ceshi_book"]

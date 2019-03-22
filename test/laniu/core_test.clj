@@ -142,8 +142,67 @@
 (select Author :where [:book.name "Living Clojure"] :debug? true)
 
 (select article
-        :where `[:id (in [6 7 8 9])]
+        :where [:id `(in [6 7 8 9])]
         :debug? true)
+
+
+(select article
+        :where [:id `(> 7)] :debug? true)
+
+(select article
+        :where [:id `(not= 7)]
+        :debug? true)
+
+(select article
+        :where [:id `(in [6 7 8])]
+        :debug? true)
+
+(select article
+        :where [:headline `(startswith "a")]
+        :debug? true)
+
+(select article
+        :where [:id `(rawsql "in (6,7,8)")]
+        :debug? true)
+
+(select article
+        :where [:id `(rawsql "in (?,?,?)" [6 7 8])]
+        :debug? true)
+
+(delete! article :where [:id 3])
+
+(select article
+        :aggregate `[(count :id) (max :view_count) (min :view_count) (avg :view_count) (sum :view_count)]
+        :debug? true)
+
+(select article
+        :aggregate `[[(count :id) :count_id] [(max :view_count) :max_view_count]]
+        :debug? true)
+
+(select Book :where [:publisher.name "BaloneyPress"]
+        :aggregate `[(count *)]
+        :debug? true
+        )
+
+
+(select article
+        :fields [:id :headline :category.name :reporter.full_name]
+        :where [:category.name "IT" :reporter.full_name "Edison Rao"]
+        :debug? true
+        )
+
+(select Book
+        :aggregate `[(avg :price)]
+        :debug? true
+        )
+
+(select Book
+        :aggregate [`(avg :price)]
+        :debug? true
+        )
+
+(select category :annotate [[`(count :article) :article_count]] :debug? true)
+
 
 
 laniu.core-test/in

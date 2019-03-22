@@ -924,7 +924,6 @@
 
 (defn parse-sql-func
   [[func-name v args]]
-  (println "func-name:" func-name)
   (let [func-str (check-field-func func-name)]
     (case func-str
       ">" [" > ?" v]
@@ -949,12 +948,10 @@
                                [(first where-condition) (rest where-condition)]
                                ['and where-condition])
         op (check-field-func op)
-        _ (println "op::: " op)
         *join-table (atom [])
         [fields vals]
         (if (keyword? (first where-condition))
           (reduce (fn [r [k v]]
-                    (println "vvvv:" v (seq? v) (list? v) (vector? v))
                     (let [[s-type new-val]                  ;查询类型
                           (if (or (seq? v) (list? v) (vector? v))
                             ; 如果是vector或list进行单独的处理
@@ -1022,7 +1019,9 @@
 (defn get-aggregate-alias
   "fix the count *"
   [k]
-  (if (not= '* k)
+  (println "000:" (str k))
+  (println (= (str k) "clojure.core/*"))
+  (if (not (#{"*" "clojure.core/*"} (str k)))
     (str "__" (name k))))
 
 
@@ -1036,13 +1035,20 @@
            (let [[as-k op k] (if (vector? item)
                                ; 如果需要用到别名
                                (cons (str " as " (name (last item))) (first item))
-                               (cons (str " as " (first item) (get-aggregate-alias (second item))) item))
+                               (cons (str " as " (check-field-func (first item)) (get-aggregate-alias (second item))) item))
+                 op (check-field-func op)
+                 k (if (keyword? k) k (check-field-func k))
+                 _ (println "kkk::" as-k)
+                 _ (println "jjjj:" item)
+                 _ (println (first item))
+                 _ (println "kjkj:" k)
                  k2 (cond (keyword? k)
                           (get-field-db-name model k)
                           (= '* k)
                           "*"
                           :else
                           (a-func k true))]
+             (println "k2k2k2:" k2)
              (if (nil? x)
                (str op "(" k2 ")" as-k)
                (str op "(" k2 ")")))))
@@ -1065,21 +1071,18 @@
         group-by [(get-field-db-name model (get-model-primary-key model))]]
     [(mapv
        (fn [item]
-         (println "item:" (seq? item) (coll? item) item)
+         (println (type item) (seq? item) (type (first item)))
          (cond
-           (or (list? item) (seq? item))
+           (seq? item)
            (let [[op key] item op (check-field-func op)]
-             (println "op:" op)
+             (println "op:" op "key" key)
              (str op "(" (get-field-db-name model (get-annotate-key key) :*join-table *join-table :*tables *tables :from :annotate) ") as " op "__" (name key))
              )
-           (and (vector? item) (list? (first item)) (keyword? (second item)))
-           (let [[[op key] alias] item]
-             (println "hahahah")
+           (and (vector? item) (seq? (first item)) (keyword? (second item)))
+           (let [[[op key] alias] item op (check-field-func op)]
+             (println "op:::" op "key" key "alias::" alias)
              (str op "(" (get-field-db-name model (get-annotate-key key) :*join-table *join-table :*tables *tables :from :annotate) ")" (if alias (str " as " (name alias))))
-             )
-           :else
-           (println (type item) "jjjjj")
-           ))
+             )))
        fields)
      @*join-table group-by]))
 
