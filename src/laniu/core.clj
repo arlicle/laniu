@@ -590,10 +590,9 @@
   [model foreignkey-field field]
   (let [f-model (get-in model [foreignkey-field :model])
         c (get-in f-model [field :db_column])]
-
     (cond
       (= :id field)
-      (get-in model [foreignkey-field :db_column])
+      (get-in f-model [field :db_column])
 
       (= :self (get-in model [foreignkey-field :model]))
       (get-in model [field :db_column])

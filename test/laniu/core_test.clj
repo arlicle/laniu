@@ -6,6 +6,10 @@
 (select category :where [:article.headline "ccc"] :debug? true)
 
 (select article
+        :fields [:id :headline :content :category.name :reporter.full_name]
+        :where [:category.name "IT" :reporter.full_name "Edison Rao"])
+
+(select article
         :fields [:id :headline :content :category.name [:reporter.full_name :reporter_full_name]]
         :where [:category.name "IT"])
 
