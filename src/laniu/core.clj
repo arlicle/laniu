@@ -739,7 +739,7 @@
 (defn get-be-many-to-many-through-data
   [model field]
   (let [m-data (meta model)
-        be-many-model (get-in m-data [:many2many field :model])
+        be-many-model (deref (get-in m-data [:many2many field :model]))
         be-field (get-in m-data [:many2many field :field])]
     [(get-in be-many-model [be-field :through-db]) (get-in be-many-model [be-field :through-field-columns])
      be-many-model (get-model-db-name be-many-model) (get-field-db-column be-many-model (get (meta be-many-model) :primary-key))]))

@@ -91,9 +91,57 @@
                    :created    {:type :int-field :verbose-name "Created" :default #(quot (System/currentTimeMillis) 1000)}
                    })
 
+
+(create-table user :only-sql? true)
 (meta @user)
 
 @user
+
+
+
+(defmodel tree
+          :fields {:name       {:type :char-field :max-length 30}
+                   :parent     {:type :foreignkey :model :self}
+                   :sort-order {:type :int-field :default 0}
+                   })
+(create-table tree :only-sql? true)
+
+(insert! reporter :values {:full_name "edison"})
+
+(insert! reporter :values {:full_name "chris"})
+(insert! category :values {:name "IT" :sort_order 1})
+
+(insert! category :values {:name "Movie" :sort_order 2})
+
+
+(defmodel Author
+          :fields {:name {:type :char-field :max-length 100}
+                   :age {:type :int-field}}
+          :meta {:db_table "ceshi_author"})
+
+(create-table Author :only-sql? true)
+
+(defmodel Book
+          :fields {:name      {:type :char-field :max-length 60}
+                   :pages     {:type :int-field}
+                   :price     {:type :float-field :default 0}
+                   :rating    {:type :tiny-int-field :choices [[-1 "unrate"] [0 "0 star"] [1 "1 star"] [2 "2 star"] [3 "3 star"] [4 "4 star"] [5 "5 star"]]}
+                   :authors   {:type :many-to-many-field :model Author :through-db "ceshi_book_authors" :through-field-columns ["book_id" "author_id"]}
+                   :publisher {:type :foreignkey :model Publisher :related-name :book}
+                   :pubdate   {:type :int-field}}
+          :meta {:db_table "ceshi_book"})
+
+(meta @Book)
+
+(meta @Author)
+
+(create-table Book :only-sql? true)
+
+(select Book :where [:authors.name "Chris Zheng"] :debug? true)
+
+(select Author :where [:book.name "Living Clojure"] :debug? true)
+
+
 
 
 (def a 30)
@@ -208,7 +256,8 @@
           :fields {:name {:type :char-field :max-length 60}}
           :meta {:db_table "ceshi_publisher"})
 
-(create-table Publisher2 :only-sql? true)
+(create-table Publisher :only-sql? true)
+
 
 
 (defmodel Publisher
@@ -578,4 +627,11 @@
 (select article
         :fields [:id :headline :category.name [:reporter.full_name :reporter_full_name]]
         :where [:id 7])
+
+(defmodel Publisher
+          :fields {:name {:type :char-field :max-length 60}}
+          :meta {:db_table "ceshi_publisher"})
+
+
+
 
