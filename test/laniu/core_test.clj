@@ -3,6 +3,7 @@
             [laniu.core :refer :all]
             [laniu.db :refer :all]))
 
+(select article :where '(not (or :id 1 :id 3)))
 
 (defdb
   {:default {:adapter       "mysql"
@@ -240,7 +241,6 @@
 
 
 (meta @*current-pooled-dbs)
-
 
 (defmodel Publisher
           :fields {:name {:type :char-field :max-length 60}}
@@ -490,3 +490,67 @@
 
 (for [[x y] (partition 2 (range 20))]
   (+ x y))
+
+
+
+
+(select article
+        :fields [:id :headline :category.name :reporter.full_name]
+        :where `(or :category.name "IT" :reporter.full_name "Edison Rao")
+        :debug? true
+        )
+
+(select category
+        :fields [:id [:name :category_name]]
+        :where [:name "IT"]
+        :debug? true
+        )
+
+(select article
+        :fields [:id :headline :category.name :reporter.full_name]
+        :where [:category.name "IT" :reporter.full_name "Edison Rao"]
+        :debug? true
+        )
+
+(select article
+        :fields [:id :headline :category.name :reporter.full_name]
+        :where `(and :category.name "IT" :reporter.full_name "Edison Rao")
+        :debug? true
+        )
+
+(select article
+        :fields [:id :headline :category.name :reporter.full_name]
+        :where `(or :category.name "IT" :reporter.full_name "Edison Rao")
+        :debug? true
+        )
+
+(select article
+        :fields [:id :headline :category.name :reporter.full_name]
+        :where `(or [:category.name "IT" :reporter.full_name "Edison Rao"] [:category.name "Fun" :reporter.full_name "Chris Zheng"])
+        :debug? true
+        )
+
+(select article
+        :fields [:id :headline :category.name :reporter.full_name]
+        :where `(or (and :category.name "IT" :reporter.full_name "Edison Rao") (and :category.name "Fun" :reporter.full_name "Chris Zheng"))
+        :debug? true
+        )
+
+(select article
+        :fields [:id :headline :category.name :reporter.full_name]
+        :where `(and (or :category.name "IT" :reporter.full_name "Edison Rao") (or :category.name "Fun" :reporter.full_name "Chris Zheng"))
+        :debug? true
+        )
+
+(select article
+        :fields [:id :headline :category.name :reporter.full_name]
+        :where `(and (or :category.name "IT" :reporter.full_name "Edison Rao") (or :category.name "Fun" :reporter.full_name "Chris Zheng"))
+        :debug? true
+        )
+
+(select article
+        :fields [:id :headline :category.name :reporter.full_name]
+        :where `[(or :category.name "IT" :reporter.full_name "Edison Rao") (or :category.name "Fun" :reporter.full_name "Chris Zheng")]
+        :debug? true
+        )
+

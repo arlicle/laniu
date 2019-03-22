@@ -899,10 +899,14 @@
 
 (defn check-where-func
   [op]
-  (println (type op))
-  (if (not (contains? #{'or 'and 'not} op))
-    (throw (Exception. (str "() must first of function 'or'/'and'/'not', " op " is not valid."))))
-  true)
+  (case (str op)
+    ("or" "clojure.core/or")
+    "or"
+    ("and" "clojure.core/and")
+    "and"
+    ("not" "clojure.core/not")
+    "not"
+    (throw (Exception. (str "() must first of function 'or'/'and'/'not', " op " is not valid.")))))
 
 
 
@@ -930,7 +934,7 @@
   (let [[op where-condition] (if (seq? where-condition)
                                [(first where-condition) (rest where-condition)]
                                ['and where-condition])
-        _ (check-where-func op)
+        op (check-where-func op)
         *join-table (atom [])
         [fields vals]
         (if (keyword? (first where-condition))
@@ -958,12 +962,12 @@
                   [[] []]
                   where-condition))]
     (if (seq fields)
-      (if (= 'not op)
+      (if (= "not" op)
         (do
           (if (> (count fields) 1)
             (throw (Exception. (str "not operation only can contains one collection. (not [:id 1 :headline \"xxx\"]) "
                                     fields " has " (count fields) " ."))))
-          [(str "not (" (clojure.string/join " " fields) ")") vals @*join-table])
+          [(str "not " (clojure.string/join " " fields)) vals @*join-table])
         [(clojure.string/join (str " " op " ") fields) vals @*join-table]))))
 
 

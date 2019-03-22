@@ -372,7 +372,7 @@ The default is `and`
 ;It's the same to 
 (select article
         :fields [:id :headline :category.name :reporter.full_name]
-        :where (and :category.name "IT" :reporter.full_name "Edison Rao")
+        :where `(and :category.name "IT" :reporter.full_name "Edison Rao")
         :debug? true
         )
 ["select ceshi_article.id, ceshi_article.headline, ceshi_category.name, ceshi_reporter.full_name from ceshi_article  INNER JOIN ceshi_reporter ON (ceshi_article.reporter_id = ceshi_reporter.id) INNER JOIN ceshi_category ON (ceshi_article.category_id = ceshi_category.id) where (ceshi_category.name= ? and ceshi_reporter.full_name= ?)" "IT" "Edison Rao"]
@@ -385,7 +385,7 @@ with `or`
 ``` clojure
 (select article
         :fields [:id :headline :category.name :reporter.full_name]
-        :where (or :category.name "IT" :reporter.full_name "Edison Rao")
+        :where `(or :category.name "IT" :reporter.full_name "Edison Rao")
         :debug? true
         )
 ["select ceshi_article.id, ceshi_article.headline, ceshi_category.name, ceshi_reporter.full_name from ceshi_article  INNER JOIN ceshi_reporter ON (ceshi_article.reporter_id = ceshi_reporter.id) INNER JOIN ceshi_category ON (ceshi_article.category_id = ceshi_category.id) where (ceshi_category.name= ? or ceshi_reporter.full_name= ?)" "IT" "Edison Rao"]
@@ -401,7 +401,7 @@ with `and` & `or`
 ``` clojure
 (select article
         :fields [:id :headline :category.name :reporter.full_name]
-        :where (or [:category.name "IT" :reporter.full_name "Edison Rao"] [:category.name "Fun" :reporter.full_name "Chris Zheng"])
+        :where `(or [:category.name "IT" :reporter.full_name "Edison Rao"] [:category.name "Fun" :reporter.full_name "Chris Zheng"])
         :debug? true
         )
 ["select ceshi_article.id, ceshi_article.headline, ceshi_category.name, ceshi_reporter.full_name from ceshi_article  INNER JOIN ceshi_reporter ON (ceshi_article.reporter_id = ceshi_reporter.id) INNER JOIN ceshi_category ON (ceshi_article.category_id = ceshi_category.id) where (ceshi_category.name= ? and ceshi_reporter.full_name= ?) or (ceshi_category.name= ? and ceshi_reporter.full_name= ?)" "IT" "Edison Rao" "Fun" "Chris Zheng"]
@@ -412,7 +412,7 @@ with `and` & `or`
 ;It's the same to 
 (select article
         :fields [:id :headline :category.name :reporter.full_name]
-        :where (or (and :category.name "IT" :reporter.full_name "Edison Rao") (and :category.name "Fun" :reporter.full_name "Chris Zheng"))
+        :where `(or (and :category.name "IT" :reporter.full_name "Edison Rao") (and :category.name "Fun" :reporter.full_name "Chris Zheng"))
         :debug? true
         )
 
@@ -420,7 +420,7 @@ with `and` & `or`
 ; another and/or select
 (select article
         :fields [:id :headline :category.name :reporter.full_name]
-        :where (and (or :category.name "IT" :reporter.full_name "Edison Rao") (or :category.name "Fun" :reporter.full_name "Chris Zheng"))
+        :where `(and (or :category.name "IT" :reporter.full_name "Edison Rao") (or :category.name "Fun" :reporter.full_name "Chris Zheng"))
         :debug? true
         )
 ["select ceshi_article.id, ceshi_article.headline, ceshi_category.name, ceshi_reporter.full_name from ceshi_article  INNER JOIN ceshi_reporter ON (ceshi_article.reporter_id = ceshi_reporter.id) INNER JOIN ceshi_category ON (ceshi_article.category_id = ceshi_category.id) where (ceshi_category.name= ? or ceshi_reporter.full_name= ?) and (ceshi_category.name= ? or ceshi_reporter.full_name= ?)" "IT" "Edison Rao" "Fun" "Chris Zheng"]
@@ -430,7 +430,7 @@ with `and` & `or`
 
 (select article
         :fields [:id :headline :category.name :reporter.full_name]
-        :where [(or :category.name "IT" :reporter.full_name "Edison Rao") (or :category.name "Fun" :reporter.full_name "Chris Zheng")]
+        :where `[(or :category.name "IT" :reporter.full_name "Edison Rao") (or :category.name "Fun" :reporter.full_name "Chris Zheng")]
         :debug? true
         )
 ```
