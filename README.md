@@ -290,12 +290,6 @@ When you define a model, the defmodel will auto define a data spec, when you ins
 (update! article
          :values {:view_count `(* :view_count ~a)}
          :where [:id 7])
-or
-
-(update! article
-         :values {:view_count [`* :view_count a]}
-         :where [:id 7])
-
 
 ; update with more complex raq sql
 (update! article 
@@ -438,12 +432,12 @@ with `and` & `or`
 with `not`, `not` only can contains one collection. (not [:id 1 :headline "xxx"])
 
 ``` clojure
-(select article :where (not [:id 1]) :debug? true)
+(select article :where `(not [:id 1]) :debug? true)
 ["select * from ceshi_article where not (ceshi_article.id= ?)" 1]
 
 (select article
         :fields [:id :headline :category.name :reporter.full_name]
-        :where (not [(or :category.name "IT" :reporter.full_name "Edison Rao") (or :category.name "Fun" :reporter.full_name "Chris Zheng")])
+        :where `(not [(or :category.name "IT" :reporter.full_name "Edison Rao") (or :category.name "Fun" :reporter.full_name "Chris Zheng")])
         :debug? true
         )
 ["select ceshi_article.id, ceshi_article.headline, ceshi_category.name, ceshi_reporter.full_name from ceshi_article  INNER JOIN ceshi_reporter ON (ceshi_article.reporter_id = ceshi_reporter.id) INNER JOIN ceshi_category ON (ceshi_article.category_id = ceshi_category.id) where not ((ceshi_category.name= ? or ceshi_reporter.full_name= ?) and (ceshi_category.name= ? or ceshi_reporter.full_name= ?))" "IT" "Edison Rao" "Fun" "Chris Zheng"]

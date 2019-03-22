@@ -281,7 +281,13 @@
                          :category 11}
                         ])
 
+(select article
+        :fields [:id :headline :category.name :reporter.full_name]
+        :where `(not [(or :category.name "IT" :reporter.full_name "Edison Rao") (or :category.name "Fun" :reporter.full_name "Chris Zheng")])
+        :debug? true
+        )
 
+(select article :where `(not [:id 1]) :debug? true)
 (update! reporter
          :values {:full_name "Edison Rao"}
          :where [:id 45])
