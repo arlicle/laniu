@@ -3,8 +3,13 @@
             [laniu.core :refer :all]
             [laniu.db :refer :all]))
 
-(select article :where '(not (or :id 1 :id 3)))
+(select category :where [:article.headline "ccc"] :debug? true)
 
+(select article
+        :fields [:id :headline :content :category.name [:reporter.full_name :reporter_full_name]]
+        :where [:category.name "IT"])
+
+(meta @category)
 (defdb
   {:default {:adapter       "mysql"
              :username      "root"
@@ -553,4 +558,20 @@
         :where `[(or :category.name "IT" :reporter.full_name "Edison Rao") (or :category.name "Fun" :reporter.full_name "Chris Zheng")]
         :debug? true
         )
+
+(select article :where '(not (or :id 1 :id 3)))
+
+(select article
+        :fields [:id :headline :category.name :reporter.full_name]
+        :where `(not [(or :category.name "IT" :reporter.full_name "Edison Rao") (or :category.name "Fun" :reporter.full_name "Chris Zheng")])
+        :debug? true
+        )
+
+(select article
+        :fields [:id :headline :category.name]
+        :where [:id 7])
+
+(select article
+        :fields [:id :headline :category.name [:reporter.full_name :reporter_full_name]]
+        :where [:id 7])
 

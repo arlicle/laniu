@@ -535,7 +535,7 @@
     c
     ; if field db_column is nil , get from one2many self.id=foreignkey-model.foreignkey-field
     (let [m-data (meta model)]
-      (if-let [[f-model f-field] [(get-in m-data [:one2many field :model]) (get-in m-data [:one2many field :field])]]
+      (if-let [[f-model f-field] [(deref (get-in m-data [:one2many field :model])) (get-in m-data [:one2many field :field])]]
         (if-let [to-field (get-in f-model [f-field :to_field])]
           (if (keyword? to-field)
             (get-foreignkey-field-db-column f-model f-field to-field)
@@ -588,16 +588,24 @@
   如果当前没有这个foreignkey字段，那么可能是one2many的字段，从foreignkey model中来取对应字段
   "
   [model foreignkey-field field]
-  (if (= :self (get-in model [foreignkey-field :model]))
-    (get-in model [field :db_column])
-    (let [f-model (get-in model [foreignkey-field :model])
-          c (get-in f-model [field :db_column])]
-      (if c
-        c
-        (let [m-data (meta model)]
-          ; 如果没有，那么就从one2many中拿
-          (if-let [f-model (get-in m-data [:one2many foreignkey-field :model])]
-            (get-field-db-column f-model field)))))))
+  (let [f-model (get-in model [foreignkey-field :model])
+        c (get-in f-model [field :db_column])]
+
+    (cond
+      (= :id field)
+      (get-in model [foreignkey-field :db_column])
+
+      (= :self (get-in model [foreignkey-field :model]))
+      (get-in model [field :db_column])
+
+      (and f-model c)
+      c
+
+      :else
+      (let [m-data (meta model) f-model (deref (get-in m-data [:one2many foreignkey-field :model]))]
+        ; 如果没有，那么就从one2many中拿
+        (if f-model
+          (get-field-db-column f-model field))))))
 
 
 
@@ -612,7 +620,7 @@
       to-field)
     ; from one2many
     (let [m-data (meta model)]
-      (if-let [[f-model f-field] [(get-in m-data [:one2many foreignkey-field :model]) (get-in m-data [:one2many foreignkey-field :field])]]
+      (if-let [[f-model f-field] [(deref (get-in m-data [:one2many foreignkey-field :model])) (get-in m-data [:one2many foreignkey-field :field])]]
         (get-field-db-column f-model f-field)))))
 
 
@@ -648,7 +656,6 @@
   返回foreignkey类型 和对应的字段db
   "
   [model foreignkey-field]
-
   (let [f-model (get-in model [foreignkey-field :model])
         m-data (meta model)
         one2many-model (get-in m-data [:one2many foreignkey-field :model])
@@ -660,10 +667,10 @@
       [:self (get-model-db-name model)]
       ; one2many
       (and (nil? f-model) one2many-model)
-      [:one2many (get-model-db-name one2many-model)]
+      [:one2many (get-model-db-name (deref one2many-model))]
       ; be many2many field
       (and (nil? f-model) be-many2many-model)
-      [:be-many2many (get-model-db-name be-many2many-model)]
+      [:be-many2many (get-model-db-name (deref be-many2many-model))]
       ; current many2many field
       (= :many-to-many-field (get-in model [foreignkey-field :type]))
       [:many-to-many]
@@ -786,9 +793,11 @@
             join-table (get-foreignkey-table model *tables from foreignkey-field join-model-db-name)
             ; 处理数据库别名问题
             join-model-db-name (if-let [table-alias (get join-table 3)] table-alias (get join-table 1))]
+
         (if (and (= :id link-table-field) (not= r-type :one2many))
           (str model-db-table "." (get-field-db-column model foreignkey-field))
           (do
+            ; 如果是one2many
             (swap! *join-table conj [join-table
                                      (str model-db-table "."
                                           (get-field-db-column model foreignkey-field)
