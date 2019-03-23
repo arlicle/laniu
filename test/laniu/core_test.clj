@@ -168,8 +168,6 @@
         :debug? true)
 
 
-"limit 1"
-"limit 1,3"
 
 
 (select article
