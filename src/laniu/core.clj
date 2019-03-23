@@ -597,11 +597,14 @@
       (= :self (get-in model [foreignkey-field :model]))
       (get-in model [field :db_column])
 
-      (and f-model c)
-      c
+      (and f-model)
+      (if c
+        c
+        (throw (Exception. (str "field " field " is not in model " (get-model-name f-model)))))
 
       :else
-      (let [m-data (meta model) f-model (deref (get-in m-data [:one2many foreignkey-field :model]))]
+      (let [m-data (meta model)
+            f-model (deref (get-in m-data [:one2many foreignkey-field :model]))]
         ; 如果没有，那么就从one2many中拿
         (if f-model
           (get-field-db-column f-model field))))))
@@ -792,7 +795,6 @@
             join-table (get-foreignkey-table model *tables from foreignkey-field join-model-db-name)
             ; 处理数据库别名问题
             join-model-db-name (if-let [table-alias (get join-table 3)] table-alias (get join-table 1))]
-
         (if (and (= :id link-table-field) (not= r-type :one2many))
           (str model-db-table "." (get-field-db-column model foreignkey-field))
           (do
