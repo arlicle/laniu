@@ -632,6 +632,17 @@ or
 
 ["select ceshi_article.category_id, ceshi_article.view_count, ceshi_article.headline, ceshi_article.content, ceshi_article.created, ceshi_article.reporter_id, ceshi_article.id from ceshi_article where ceshi_article.id > ? order by ceshi_article.id asc limit 3,7" 7]
 
+### get-one
+(get-one article :where [:id 7] :debug? true)
+["select ceshi_article.category_id, ceshi_article.view_count, ceshi_article.headline, ceshi_article.content, ceshi_article.created, ceshi_article.reporter_id, ceshi_article.id from ceshi_article where ceshi_article.id= ? limit 1" 7]
+
+{:category_id 9,
+ :view_count 30,
+ :headline "Apple make a phone",
+ :content "bala babla ....",
+ :created 1546750837,
+ :reporter_id 45,
+ :id 7}
 
 ###  delete data
 

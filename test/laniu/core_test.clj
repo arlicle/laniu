@@ -167,8 +167,7 @@
         :limit 1
         :debug? true)
 
-
-
+(get-one article :where [:id 7] :debug? true)
 
 (select article
         :where [:id `(> 7)]
