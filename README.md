@@ -593,8 +593,19 @@ CREATE TABLE `ceshi_book_authors` (
 ["select * from ceshi_article where ceshi_article.id in (?,?,?)" 6 7 8]
 ```
 
+### order by
+(select article
+        :where [:id `(> 7)]
+        :order-by [:id])
+
+["select ceshi_article.category_id, ceshi_article.view_count, ceshi_article.headline, ceshi_article.content, ceshi_article.created, ceshi_article.reporter_id, ceshi_article.id from ceshi_article where ceshi_article.id > ? order by ceshi_article.id asc" 7]
 
 
+(select article
+        :where [:id `(> 7)]
+        :order-by [:-id]
+        :debug? true)
+["select ceshi_article.category_id, ceshi_article.view_count, ceshi_article.headline, ceshi_article.content, ceshi_article.created, ceshi_article.reporter_id, ceshi_article.id from ceshi_article where ceshi_article.id > ? order by ceshi_article.id desc" 7]
 
 
 ###  delete data

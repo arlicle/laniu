@@ -936,9 +936,9 @@
       "rawsql" [(str " " v) args]
       "startswith" [" like ?" (str v "%")]
       "nil?" [(if v
-              " IS NULL "
-              " IS NOT NULL "
-              ) nil]
+                " IS NULL "
+                " IS NOT NULL "
+                ) nil]
       ("in" :in) [(str " in " "(" (clojure.string/join "," (repeat (count v) "?")) ")") v]
       [" **** " " none "])))
 
@@ -1180,15 +1180,27 @@
 
 
 
+(defn infix-order-by
+  "把:id 变为 :id \"ASC\" :-id 变为 \"DESC\" "
+  [order-by]
+  (mapv
+    (fn [field]
+      (if (= "-" (subs (name field) 0 1))
+        [(keyword (subs (name field) 1)) "desc"]
+        [field "asc"]))
+    order-by))
+
+
+
 (defn get-order-query
   "把 :order-by [:id \"ASC\"] 转换为order by sql"
   [model order-by *tables]
   (if (seq order-by)
-    (let [*join-table (atom [])]
+    (let [*join-table (atom []) order-by* (infix-order-by order-by)]
       [(mapv
          (fn [[k v]]
            (str (get-field-db-name model k :*join-table *join-table :*tables *tables :from :where) " " v))
-         (partition 2 order-by)) @*join-table])))
+         order-by*) @*join-table])))
 
 
 

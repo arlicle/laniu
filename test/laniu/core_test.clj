@@ -149,6 +149,35 @@
         :where [:id `(> 7)] :debug? true)
 
 (select article
+        :where [:id 7]
+        :order-by [:-id]
+        :debug? true)
+
+
+(select article
+        :where [:id 7]
+        :order-by [:id]
+        :debug? true)
+
+
+(select article
+        :where [:id `(> 7)]
+        :order-by [:-id]
+        :limit 1
+        :debug? true)
+
+
+
+(first (name :-id))
+(select article
+        :where [:id 7]
+        :order-by [:-id]
+        :debug? true)
+
+
+(first "-fdsaf")
+
+(select article
         :where [:id `(not= 7)]
         :debug? true)
 
