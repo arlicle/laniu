@@ -1203,6 +1203,18 @@
          order-by*) @*join-table])))
 
 
+(defn get-limit-query
+  [limit]
+  (cond
+    (int? limit)
+    (format "limit %d" limit)
+    (= 1 (count limit))
+    (format "limit %d" (first limit))
+    :else
+    (apply format "limit %d,%d" limit)))
+
+
+
 
 (defn select*
   [model {fields-list :fields aggregate-fields :aggregate annotate-fields :annotate where-condition :where group-by :group-by order-by :order-by limit :limit}]
@@ -1231,7 +1243,7 @@
                  (when order-by-strs
                    (str " order by " (clojure.string/join ", " order-by-strs)))
                  (when limit
-                   (str " " limit)))]
+                   (str " " (get-limit-query limit))))]
     (into [sql] (filter #(not (nil? %)) values))))
 
 
@@ -1252,7 +1264,7 @@
 
 (defn get-one
   [model & {:keys [debug? only-sql?] :as all}]
-  (let [query-vec (select* @model (assoc all :limit "limit 1"))]
+  (let [query-vec (select* @model (assoc all :limit 1))]
     (when debug?
       (prn query-vec))
     (if only-sql?
@@ -1270,7 +1282,7 @@
     (throw (Exception. " :where must have")))
   (if (empty? values)
     (throw (Exception. " :values must have")))
-  (let [query-vec (select* @model (assoc all :limit "limit 1"))
+  (let [query-vec (select* @model (assoc all :limit 1))
         connection (db-connection)
         [insert-data db-table-name] (insert!* @model all)
         db-table (keyword db-table-name)]

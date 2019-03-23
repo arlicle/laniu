@@ -608,6 +608,31 @@ CREATE TABLE `ceshi_book_authors` (
 ["select ceshi_article.category_id, ceshi_article.view_count, ceshi_article.headline, ceshi_article.content, ceshi_article.created, ceshi_article.reporter_id, ceshi_article.id from ceshi_article where ceshi_article.id > ? order by ceshi_article.id desc" 7]
 
 
+### limit
+(select article
+        :where [:id `(> 7)]
+        :limit 3
+        :order-by [:id])
+
+or 
+
+(select article
+        :where [:id `(> 7)]
+        :limit [3]
+        :order-by [:id])
+
+["select ceshi_article.category_id, ceshi_article.view_count, ceshi_article.headline, ceshi_article.content, ceshi_article.created, ceshi_article.reporter_id, ceshi_article.id from ceshi_article where ceshi_article.id > ? order by ceshi_article.id asc limit 3" 7]
+
+
+(select article
+        :where [:id `(> 7)]
+        :limit [3, 7]
+        :order-by [:id]
+        :debug? true)
+
+["select ceshi_article.category_id, ceshi_article.view_count, ceshi_article.headline, ceshi_article.content, ceshi_article.created, ceshi_article.reporter_id, ceshi_article.id from ceshi_article where ceshi_article.id > ? order by ceshi_article.id asc limit 3,7" 7]
+
+
 ###  delete data
 
 ``` clojure

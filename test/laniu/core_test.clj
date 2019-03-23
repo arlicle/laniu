@@ -156,7 +156,8 @@
 
 (select article
         :where [:id 7]
-        :order-by [:id]
+        ;:order-by [:id]
+        :limit 10
         :debug? true)
 
 
@@ -167,6 +168,15 @@
         :debug? true)
 
 
+"limit 1"
+"limit 1,3"
+
+
+(select article
+        :where [:id `(> 7)]
+        :limit [3, 7]
+        :order-by [:id]
+        :debug? true)
 
 (first (name :-id))
 (select article
