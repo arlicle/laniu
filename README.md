@@ -305,6 +305,16 @@ When you define a model, the defmodel will auto define a data spec, when you ins
 ; {:update-count 1}
 ```
 
+### get or insert
+``` clojure
+(get-or-insert! Publisher :values {:name "Yunnan"} :where [:id 1])
+; get one
+; {:name "Yunnan", :id 1}
+
+(get-or-insert! Publisher :values {:name "Alice in Wonderland"} :where [:name "Alice in Wonderland"])
+; not found and insert!
+{:id {:generated_key 156}}
+```
 
 ### select data
 ``` clojure

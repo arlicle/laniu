@@ -1291,7 +1291,7 @@
     (let [result (first (jdbc/query connection query-vec))]
       (if (not result)
         (let [[vid] (jdbc/insert! connection db-table insert-data)]
-          (assoc result :id vid))
+          vid)
         result))))
 
 

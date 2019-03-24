@@ -169,6 +169,9 @@
 
 (get-one article :where [:id 7] :debug? true)
 
+
+(get-or-insert! Publisher :values {:name "Alice in Wonderlandx"} :where [:name "Alice in Wonderlandx"])
+
 (select article
         :where [:id `(> 7)]
         :limit [3, 7]
