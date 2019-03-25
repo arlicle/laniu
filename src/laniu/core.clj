@@ -167,11 +167,9 @@
 
         choices-spec (if-let [choices (:choices opts)]
                        (let [choices-map (into {} choices)]
-                         `#(contains? ~choices-map %)))
-        ]
+                         `#(contains? ~choices-map %)))]
 
-    (filterv identity [`int? max-value-spec min-value-spec choices-spec])
-    ))
+    (filterv identity [`int? max-value-spec min-value-spec choices-spec])))
 
 
 
@@ -1286,7 +1284,6 @@
         connection (db-connection)
         [insert-data db-table-name] (insert!* @model all)
         db-table (keyword db-table-name)]
-
 
     (let [result (first (jdbc/query connection query-vec))]
       (if (not result)
