@@ -503,8 +503,7 @@
              `(reset! ~model_1
                       (vary-meta @~model_1 assoc-in [:many2many ~(:related-key v)]
                                  {:model ~(symbol model-name)
-                                  :field ~k
-                                  })))))))
+                                  :field ~k})))))))
 
 
 
@@ -575,8 +574,7 @@
      (if (and field-type (not= (get-in model [field :type]) field-type))
        (throw (Exception. (str "only :foreignkey field can related search. "
                                field " is not a foreignkey field. "
-                               field "'s type is " (or (get-in model [field :type]) "nil")
-                               )))))
+                               field "'s type is " (or (get-in model [field :type]) "nil"))))))
    true))
 
 
@@ -916,9 +914,7 @@
     "not"
     ("count" "clojure.core/count")
     "count"
-    (op-func2str (str op))
-    ;(throw (Exception. (str "() must first of function 'or'/'and'/'not', " op " is not valid.")))
-    ))
+    (op-func2str (str op))))
 
 
 
@@ -1166,8 +1162,7 @@
   (let [query-vec (update!*-memoize @model all)
         connection (db-connection)
         [insert-data db-table-name] (insert!* @model all)
-        db-table (keyword db-table-name)
-        ]
+        db-table (keyword db-table-name)]
 
     (jdbc/with-db-transaction [connection connection]
                               (let [[result] (jdbc/execute! connection query-vec)]
