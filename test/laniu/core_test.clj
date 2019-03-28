@@ -18,7 +18,20 @@
 
 (defmodel reporter
           :fields {:full_name {:type :char-field :max-length 70}}
-          :meta {:db_table "ceshi_reporter"})
+          :meta {:db_table "ceshi_reporter"}
+          :clean-methods {:full_name #(clojure.string/upper-case %)})
+
+(insert! reporter :values {:full_name "edison rao"} :debug? true)
+
+(meta @reporter)
+
+(insert! reporter :values {:full_name "aaa"} :only-sql? true)
+
+
+
+
+
+((fn* [p1__10219#] (clojure.string/upper-case p1__10219#)) "aaa")
 
 
 (defmodel category

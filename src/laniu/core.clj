@@ -396,7 +396,7 @@
   With all of this, Laniu gives you an automatically-generated database-access API
 
   "
-  [model-name & {fields-configs :fields meta-configs :meta methods-config :methods :or {meta-configs {} methods-config {}}}]
+  [model-name & {fields-configs :fields meta-configs :meta clean-methods :clean-methods :or {meta-configs {} clean-methods nil}}]
   (let [
         ns-name (str (ns-name *ns*))
         meta-configs (merge {:db_table (create-model-db-name ns-name model-name)} meta-configs)
@@ -437,7 +437,8 @@
                                   :name                 (name model-name)
                                   :ns-name              ns-name
                                   :primary-key          pk
-                                  :meta                 meta-configs})]
+                                  :meta                 meta-configs
+                                  :clean-methods clean-methods})]
 
     `(do
        ~@(for [[k field-opts] fields-configs]
@@ -811,17 +812,21 @@
 
 (defn clean-insert-model-data
   [model data remove-pk?]
-  (let [pk (get-model-primary-key model) fields (get-model-fields model) fields (if remove-pk? (clojure.set/difference fields #{pk}) fields)]
+  (let [pk (get-model-primary-key model) fields (get-model-fields model) fields (if remove-pk? (clojure.set/difference fields #{pk}) fields) meta-data (meta model)
+        _ (println meta-data)]
     (reduce (fn [r [k v]]
               (cond
                 (= :many-to-many-field (get-in model [k :type]))
                 (assoc-in r [1 k] (if (fn? v) (v) v))
+
                 (and (get-in model [k :primary-key?]) (not v))
                 r
                 :else
                 (assoc-in r [0 (get-field-db-name model k)] (if (or (fn? v) (and (seq? v) (#{'fn* 'fn} (first v))))
                                                               ((eval v))
-                                                              v))))
+                                                              (if-let [f (get-in meta-data [:clean-methods k])]
+                                                                ((eval f) v)
+                                                                v)))))
             [{} {}]
             (select-keys (merge (get-model-default-fields model) data) fields))))
 
@@ -1323,10 +1328,12 @@
   (apply jdbc/query (db-connection) args))
 
 
+
 (defn raw-execute!
   "raw sql for insert, update, delete ..."
   [& args]
   (apply jdbc/execute! (db-connection) args))
+
 
 
 (defn desc-table
@@ -1335,10 +1342,13 @@
   (raw-query (str "desc " (get-model-db-name @model))))
 
 
+
 (defn show-create-table
   "show create table table-name;"
   [model]
   (raw-query (str "show create table " (get-model-db-name @model))))
+
+
 
 (defn truncate-table
   "truncate table"

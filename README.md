@@ -250,6 +250,23 @@ When you define a model, the defmodel will auto define a data spec, when you ins
 
 ```
 
+
+### insert with clean data methods
+
+
+``` clojure
+(defmodel reporter
+          :fields {:full_name {:type :char-field :max-length 70}}
+          :meta {:db_table "ceshi_reporter"}
+          :clean-methods {:full_name #(clojure.string/upper-case %)})
+
+(insert! reporter :values {:full_name "edison rao"} :debug? true)
+; edison rao through clean-methods change to EDISON RAO
+"insert data to db " :ceshi_reporter " : " {"ceshi_reporter.full_name" "EDISON RAO"}
+```
+
+
+
 ### update data
 
 ``` clojure
